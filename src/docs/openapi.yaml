@@ -1,0 +1,451 @@
+openapi: 3.0.3
+info:
+  title: Akshayakalpa GPS Tracking & Journey API
+  description: >
+    API for tracking live GPS coordinates pushed from mobile devices at regular intervals
+    (e.g., every 10 seconds) and managing user delivery/field journeys.
+    Supports offline batch coordinate synchronization and enforces single active journey constraints.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+tags:
+  - name: Journey
+    description: Journey lifecycle endpoints (start, end, query)
+  - name: Tracking
+    description: GPS coordinate tracking & synchronization
+  - name: System
+    description: System health check
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check endpoint
+      description: Returns health status of the API server.
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2026-10-12T13:00:00.000Z
+
+  /start:
+    post:
+      tags:
+        - Journey
+      summary: Start a new journey
+      description: >
+        Starts a new journey for a phone number. 
+        Only one journey can be active (where stop is null) at any time for a given phone number.
+        Returns 409 Conflict if an active journey is already running.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartJourneyRequest'
+      responses:
+        '201':
+          description: Journey started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Journey started successfully
+                  journey:
+                    $ref: '#/components/schemas/Journey'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: An active journey is already in progress for this phone number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+
+  /end:
+    post:
+      tags:
+        - Journey
+      summary: End the active journey
+      description: Ends the currently active journey for the given phone number by recording the stop timestamp.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndJourneyRequest'
+      responses:
+        '200':
+          description: Journey ended successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Journey ended successfully
+                  journey:
+                    $ref: '#/components/schemas/Journey'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: No active journey found for this phone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /track:
+    post:
+      tags:
+        - Tracking
+      summary: Upload coordinate(s)
+      description: >
+        Push GPS coordinates recorded by the mobile app.
+        Supports either a single coordinate or an ordered array of coordinates (for batch sync after offline disconnection).
+        If `journey_id` is omitted, coordinates automatically attach to the active journey for the phone number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackRequest'
+      responses:
+        '201':
+          description: Coordinates saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackSuccessResponse'
+        '400':
+          description: Invalid coordinates data or attempt to append to an ended journey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: No active journey exists for this phone number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /journey/current:
+    get:
+      tags:
+        - Journey
+      summary: Get the current active journey and all its coordinates
+      description: Fetches the currently running journey for a phone number along with all recorded coordinates sorted by sequence.
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          description: Mobile phone number
+          schema:
+            type: string
+            example: '+919876543210'
+      responses:
+        '200':
+          description: Current active journey details and coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyWithCoordinates'
+        '400':
+          description: Missing or invalid phone query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: No active journey found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /journeys:
+    get:
+      tags:
+        - Journey
+      summary: Get list of journeys
+      description: Retrieves a list of all journeys, optionally filtered by phone number.
+      parameters:
+        - name: phone
+          in: query
+          required: false
+          description: Filter journeys by phone number
+          schema:
+            type: string
+            example: '+919876543210'
+      responses:
+        '200':
+          description: List of journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 2
+                  journeys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JourneyWithStatus'
+
+  /journey/{id}:
+    get:
+      tags:
+        - Journey
+      summary: Get journey by ID
+      description: Returns specific journey metadata and all corresponding GPS coordinates ordered by sequence.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Numeric journey ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Journey details with coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyWithCoordinates'
+        '400':
+          description: Invalid journey ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Journey not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    StartJourneyRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          description: Phone number of the user / delivery partner
+          example: '+919876543210'
+        start:
+          type: string
+          format: date-time
+          description: Optional ISO-8601 start timestamp (defaults to current time on server)
+          example: '2026-10-12T10:00:00.000Z'
+
+    EndJourneyRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          description: Phone number of the user
+          example: '+919876543210'
+        stop:
+          type: string
+          format: date-time
+          description: Optional ISO-8601 stop timestamp (defaults to current time on server)
+          example: '2026-10-12T11:00:00.000Z'
+
+    CoordinateItem:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - sequence
+      properties:
+        latitude:
+          type: number
+          format: double
+          description: GPS Latitude in decimal degrees
+          example: 12.971598
+        longitude:
+          type: number
+          format: double
+          description: GPS Longitude in decimal degrees
+          example: 77.594562
+        sequence:
+          type: integer
+          description: Monotonically increasing sequence / order number from phone
+          example: 1
+        recorded_at:
+          type: string
+          format: date-time
+          description: Optional timestamp recorded on the device
+          example: '2026-10-12T10:00:10.000Z'
+
+    TrackRequest:
+      type: object
+      required:
+        - phone
+        - coordinates
+      properties:
+        phone:
+          type: string
+          description: Phone number of the user
+          example: '+919876543210'
+        journey_id:
+          type: integer
+          description: Optional specific journey ID. If omitted, the currently active journey is used.
+          example: 1
+        coordinates:
+          oneOf:
+            - $ref: '#/components/schemas/CoordinateItem'
+            - type: array
+              items:
+                $ref: '#/components/schemas/CoordinateItem'
+              description: Batch of coordinates collected offline or over time
+          example:
+            - latitude: 12.971598
+              longitude: 77.594562
+              sequence: 1
+              recorded_at: '2026-10-12T10:00:10.000Z'
+            - latitude: 12.972100
+              longitude: 77.595100
+              sequence: 2
+              recorded_at: '2026-10-12T10:00:20.000Z'
+
+    Journey:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        phone:
+          type: string
+          example: '+919876543210'
+        start:
+          type: string
+          format: date-time
+          example: '2026-10-12T10:00:00.000Z'
+        stop:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    JourneyWithStatus:
+      allOf:
+        - $ref: '#/components/schemas/Journey'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [active, completed]
+              example: active
+
+    CoordinateRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 101
+        journeyId:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          format: double
+          example: 12.971598
+        longitude:
+          type: number
+          format: double
+          example: 77.594562
+        sequence:
+          type: integer
+          example: 1
+        recordedAt:
+          type: string
+          format: date-time
+          example: '2026-10-12T10:00:10.000Z'
+
+    JourneyWithCoordinates:
+      type: object
+      properties:
+        journey:
+          $ref: '#/components/schemas/JourneyWithStatus'
+        coordinates_count:
+          type: integer
+          example: 2
+        coordinates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoordinateRecord'
+
+    TrackSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Successfully saved 2 coordinate(s)
+        journey_id:
+          type: integer
+          example: 1
+        inserted_count:
+          type: integer
+          example: 2
+        coordinates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoordinateRecord'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Resource not found
+
+    ConflictError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: An active journey already exists for this phone. Please end it before starting a new one.
+        activeJourney:
+          $ref: '#/components/schemas/Journey'
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: object
+          description: Zod validation error details
