@@ -1,22 +1,21 @@
 openapi: 3.0.3
 info:
-  title: Akshayakalpa GPS Tracking & Journey API
+  title: Akshayakalpa Delivery Tracking Integration API
   description: >
-    API for tracking live GPS coordinates pushed from mobile devices at regular intervals
-    (e.g., every 10 seconds) and managing user delivery/field journeys.
-    Supports offline batch coordinate synchronization and enforces single active journey constraints.
+    API wrapper for Akshayakalpa delivery tracking with Frappe backend integration
+    and singleton Redis KV store for telemetry proxying.
   version: 1.0.0
 servers:
   - url: http://localhost:3000
     description: Local Development Server
 
 tags:
-  - name: Journey
-    description: Journey lifecycle endpoints (start, end, query)
-  - name: Tracking
-    description: GPS coordinate tracking & synchronization
   - name: System
     description: System health check
+  - name: Frappe
+    description: >
+      Wrapper endpoints that forward requests to the Frappe delivery-management
+      API (register_device, start_tracking, stop_tracking) and proxy telemetry ingest.
 
 paths:
   /health:
@@ -24,7 +23,7 @@ paths:
       tags:
         - System
       summary: Health check endpoint
-      description: Returns health status of the API server.
+      description: Returns health status of the API server and Redis connection status.
       responses:
         '200':
           description: Server is healthy
@@ -39,394 +38,366 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
-                    example: 2026-10-12T13:00:00.000Z
-
-  /start:
-    post:
-      tags:
-        - Journey
-      summary: Start a new journey
-      description: >
-        Starts a new journey for a phone number. 
-        Only one journey can be active (where stop is null) at any time for a given phone number.
-        Returns 409 Conflict if an active journey is already running.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StartJourneyRequest'
-      responses:
-        '201':
-          description: Journey started successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
+                    example: 2026-10-14T10:00:00.000Z
+                  redis:
                     type: string
-                    example: Journey started successfully
-                  journey:
-                    $ref: '#/components/schemas/Journey'
-        '400':
-          description: Invalid request payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '409':
-          description: An active journey is already in progress for this phone number
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConflictError'
+                    example: connected
 
-  /end:
+  /api/frappe/register-device:
     post:
       tags:
-        - Journey
-      summary: End the active journey
-      description: Ends the currently active journey for the given phone number by recording the stop timestamp.
+        - Frappe
+      summary: Register a delivery-boy device with Frappe
+      description: >
+        Forwards a registration request to Frappe's `register_device` method.
+        On success, our backend stores the returned `api_key` in a secure server-side KV store,
+        rewrites the telemetry endpoint to our backend ingest proxy (`/api/frappe/ingest`),
+        and returns the sanitized response (with `api_key` stripped) to the mobile client.
+        The client device/app never receives or needs to manage the upstream `api_key`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EndJourneyRequest'
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+            example:
+              mobile_number: "9876543210"
+              pin: "1234"
+              device_id: stable-installation-id
+              device_details:
+                platform: android
+                manufacturer: Samsung
+                device_model: SM-A135F
+                os_version: "14"
+                app_version: 1.0.0
       responses:
         '200':
-          description: Journey ended successfully
+          description: Device registered successfully; returns driver, vehicle, route and telemetry config
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   message:
-                    type: string
-                    example: Journey ended successfully
-                  journey:
-                    $ref: '#/components/schemas/Journey'
+                    $ref: '#/components/schemas/RegisterDeviceResponse'
         '400':
-          description: Invalid request payload
+          description: Validation error (mobile number format, PIN length, missing field)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: No active journey found for this phone
+        '403':
+          description: Authentication or authorisation failed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Frappe service temporarily unavailable; retry with backoff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrappeGatewayError'
 
-  /track:
+  /api/frappe/start-tracking:
     post:
       tags:
-        - Tracking
-      summary: Upload coordinate(s)
+        - Frappe
+      summary: Start a trip / begin tracking via Frappe
       description: >
-        Push GPS coordinates recorded by the mobile app.
-        Supports either a single coordinate or an ordered array of coordinates (for batch sync after offline disconnection).
-        If `journey_id` is omitted, coordinates automatically attach to the active journey for the phone number.
+        Forwards a start-tracking request to Frappe's `start_tracking` method.
+        Supports both `multipart/form-data` (uploading `odometer_photo` as a file)
+        and `application/json` (with `odometer_photo` as a base64 Data URI).
+        The backend automatically converts uploaded files to the upstream Base64 Data URI format.
+        The caller must generate a stable `request_id` for this Start event and
+        reuse it on every retry so that Frappe returns the same `trip_id`
+        idempotently (BR03, BR06). The response contains `trip_id`, status
+        `In Transit`, `started_at`, and any warnings.
       requestBody:
         required: true
         content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - mobile_number
+                - pin
+                - device_id
+                - request_id
+                - odometer_photo
+              properties:
+                mobile_number:
+                  type: string
+                  example: "9876543210"
+                pin:
+                  type: string
+                  example: "1234"
+                device_id:
+                  type: string
+                  example: stable-installation-id
+                request_id:
+                  type: string
+                  example: start_7f15b8d8_20261012
+                started_at:
+                  type: string
+                  format: date-time
+                  example: "2026-10-12T08:30:00Z"
+                odometer_photo:
+                  type: string
+                  format: binary
+                  description: Binary JPEG/PNG image file (max 5 MB). Converted to base64 Data URI by the backend.
+                device_details:
+                  type: string
+                  description: Optional JSON string of device details
+                  example: '{"platform":"android","app_version":"1.0.0"}'
           application/json:
             schema:
-              $ref: '#/components/schemas/TrackRequest'
+              $ref: '#/components/schemas/StartTrackingRequest'
+            example:
+              mobile_number: "9876543210"
+              pin: "1234"
+              device_id: stable-installation-id
+              request_id: start_7f15b8d8_20261012
+              started_at: "2026-10-12T08:30:00Z"
+              odometer_photo: "data:image/jpeg;base64,<base64-data>"
+              device_details:
+                platform: android
+                app_version: 1.0.0
       responses:
-        '201':
-          description: Coordinates saved successfully
+        '200':
+          description: Trip started (or safely recovered). Contains `trip_id` and status `In Transit`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrackSuccessResponse'
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/StartTrackingResponse'
         '400':
-          description: Invalid coordinates data or attempt to append to an ended journey
+          description: Validation error (missing required field, invalid data URI, bad timestamps)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: No active journey exists for this phone number
+        '403':
+          description: Authentication or authorisation failed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Image exceeds 5 MB limit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Payload Too Large: odometer_photo exceeds the maximum allowed size of 5 MB"
+        '502':
+          description: Frappe service temporarily unavailable; retry with same request_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrappeGatewayError'
 
-  /journey/current:
-    get:
+  /api/frappe/stop-tracking:
+    post:
       tags:
-        - Journey
-      summary: Get the current active journey and all its coordinates
-      description: Fetches the currently running journey for a phone number along with all recorded coordinates sorted by sequence.
+        - Frappe
+      summary: Stop a trip / complete tracking via Frappe
+      description: >
+        Forwards a stop-tracking request to Frappe's `stop_tracking` method.
+        Supports both `multipart/form-data` (uploading `odometer_photo` as a file)
+        and `application/json` (with `odometer_photo` as a base64 Data URI).
+        The backend automatically converts uploaded files to the upstream Base64 Data URI format.
+        Replaying a Stop for an already-completed trip is treated as success by
+        Frappe (BR09). The caller should flush all remaining telemetry batches
+        to the telemetry service before calling this endpoint.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - mobile_number
+                - pin
+                - device_id
+                - trip_id
+                - odometer_photo
+              properties:
+                mobile_number:
+                  type: string
+                  example: "9876543210"
+                pin:
+                  type: string
+                  example: "1234"
+                device_id:
+                  type: string
+                  example: stable-installation-id
+                trip_id:
+                  type: string
+                  example: TRIP-2026-00001
+                stopped_at:
+                  type: string
+                  format: date-time
+                  example: "2026-10-12T11:45:00Z"
+                odometer_photo:
+                  type: string
+                  format: binary
+                  description: Binary JPEG/PNG image file (max 5 MB). Converted to base64 Data URI by the backend.
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopTrackingRequest'
+            example:
+              mobile_number: "9876543210"
+              pin: "1234"
+              device_id: stable-installation-id
+              trip_id: TRIP-2026-00001
+              stopped_at: "2026-10-12T11:45:00Z"
+              odometer_photo: "data:image/jpeg;base64,<base64-data>"
+      responses:
+        '200':
+          description: Trip completed. Status is `Completed`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/StopTrackingResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          description: Authentication or authorisation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Image exceeds 5 MB limit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Payload Too Large: odometer_photo exceeds the maximum allowed size of 5 MB"
+        '502':
+          description: Frappe service temporarily unavailable; retry with backoff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrappeGatewayError'
+
+  /api/frappe/ingest:
+    post:
+      tags:
+        - Frappe
+      summary: Proxy telemetry readings to the telemetry service
+      description: >
+        The mobile app sends GPS readings to THIS endpoint using a constant URL.
+        The backend looks up the device's telemetry `api_key` from its server-side
+        KV store (populated during register/start/stop) and forwards the batch to
+        the real telemetry service, attaching the `X-API-Key` header internally.
+        The mobile app never sees the api_key.
+        The response (HTTP status + body) is forwarded verbatim from the telemetry
+        service so the app can handle 202, 409, 413, 429, etc. exactly as specified.
       parameters:
-        - name: phone
-          in: query
+        - name: X-Device-ID
+          in: header
           required: true
-          description: Mobile phone number
+          description: The stable device identifier used during registration
           schema:
             type: string
-            example: '+919876543210'
-      responses:
-        '200':
-          description: Current active journey details and coordinates
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JourneyWithCoordinates'
-        '400':
-          description: Missing or invalid phone query parameter
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: No active journey found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /journeys:
-    get:
-      tags:
-        - Journey
-      summary: Get list of journeys
-      description: Retrieves a list of all journeys, optionally filtered by phone number.
-      parameters:
-        - name: phone
-          in: query
+            example: stable-installation-id
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: >
+            Stable UUID for this batch. Reuse on every retry of the same batch
+            (BR08). Do not generate a new key for the same batch content.
+          schema:
+            type: string
+            example: batch-550e8400-e29b-41d4-a716-446655440000
+        - name: X-Correlation-ID
+          in: header
           required: false
-          description: Filter journeys by phone number
+          description: Client-generated trace ID for diagnostics
           schema:
             type: string
-            example: '+919876543210'
+            example: trace-550e8400-e29b-41d4-a716-446655440001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryIngestRequest'
+            example:
+              data:
+                - tripId: TRIP-2026-00001
+                  deviceId: stable-installation-id
+                  latitude: 12.9716
+                  longitude: 77.5946
+                  speedKph: 18.5
+                  headingDegrees: 125.0
+                  accuracyMeters: 7.2
+                  altitudeMeters: 910.0
+                  deviceTime: "2026-10-13T08:31:10Z"
       responses:
-        '200':
-          description: List of journeys
+        '202':
+          description: Batch accepted by the telemetry service
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    example: 2
-                  journeys:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/JourneyWithStatus'
-
-  /journey/{id}:
-    get:
-      tags:
-        - Journey
-      summary: Get journey by ID
-      description: Returns specific journey metadata and all corresponding GPS coordinates ordered by sequence.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Numeric journey ID
-          schema:
-            type: integer
-            example: 1
-      responses:
-        '200':
-          description: Journey details with coordinates
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JourneyWithCoordinates'
+                $ref: '#/components/schemas/TelemetryIngestResponse'
         '400':
-          description: Invalid journey ID
+          description: Missing X-Device-ID or Idempotency-Key header, or invalid body
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
         '404':
-          description: Journey not found
+          description: Device not registered — no api_key found in the KV store
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Idempotency key reused with different content (forwarded from telemetry service)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Payload too large — split into smaller batches (forwarded from telemetry service)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited — honour Retry-After (forwarded from telemetry service)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Telemetry service unreachable; retry with backoff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrappeGatewayError'
+
 
 components:
   schemas:
-    StartJourneyRequest:
-      type: object
-      required:
-        - phone
-      properties:
-        phone:
-          type: string
-          description: Phone number of the user / delivery partner
-          example: '+919876543210'
-        start:
-          type: string
-          format: date-time
-          description: Optional ISO-8601 start timestamp (defaults to current time on server)
-          example: '2026-10-12T10:00:00.000Z'
-
-    EndJourneyRequest:
-      type: object
-      required:
-        - phone
-      properties:
-        phone:
-          type: string
-          description: Phone number of the user
-          example: '+919876543210'
-        stop:
-          type: string
-          format: date-time
-          description: Optional ISO-8601 stop timestamp (defaults to current time on server)
-          example: '2026-10-12T11:00:00.000Z'
-
-    CoordinateItem:
-      type: object
-      required:
-        - latitude
-        - longitude
-        - sequence
-      properties:
-        latitude:
-          type: number
-          format: double
-          description: GPS Latitude in decimal degrees
-          example: 12.971598
-        longitude:
-          type: number
-          format: double
-          description: GPS Longitude in decimal degrees
-          example: 77.594562
-        sequence:
-          type: integer
-          description: Monotonically increasing sequence / order number from phone
-          example: 1
-        recorded_at:
-          type: string
-          format: date-time
-          description: Optional timestamp recorded on the device
-          example: '2026-10-12T10:00:10.000Z'
-
-    TrackRequest:
-      type: object
-      required:
-        - phone
-        - coordinates
-      properties:
-        phone:
-          type: string
-          description: Phone number of the user
-          example: '+919876543210'
-        journey_id:
-          type: integer
-          description: Optional specific journey ID. If omitted, the currently active journey is used.
-          example: 1
-        coordinates:
-          oneOf:
-            - $ref: '#/components/schemas/CoordinateItem'
-            - type: array
-              items:
-                $ref: '#/components/schemas/CoordinateItem'
-              description: Batch of coordinates collected offline or over time
-          example:
-            - latitude: 12.971598
-              longitude: 77.594562
-              sequence: 1
-              recorded_at: '2026-10-12T10:00:10.000Z'
-            - latitude: 12.972100
-              longitude: 77.595100
-              sequence: 2
-              recorded_at: '2026-10-12T10:00:20.000Z'
-
-    Journey:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        phone:
-          type: string
-          example: '+919876543210'
-        start:
-          type: string
-          format: date-time
-          example: '2026-10-12T10:00:00.000Z'
-        stop:
-          type: string
-          format: date-time
-          nullable: true
-          example: null
-
-    JourneyWithStatus:
-      allOf:
-        - $ref: '#/components/schemas/Journey'
-        - type: object
-          properties:
-            status:
-              type: string
-              enum: [active, completed]
-              example: active
-
-    CoordinateRecord:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 101
-        journeyId:
-          type: integer
-          example: 1
-        latitude:
-          type: number
-          format: double
-          example: 12.971598
-        longitude:
-          type: number
-          format: double
-          example: 77.594562
-        sequence:
-          type: integer
-          example: 1
-        recordedAt:
-          type: string
-          format: date-time
-          example: '2026-10-12T10:00:10.000Z'
-
-    JourneyWithCoordinates:
-      type: object
-      properties:
-        journey:
-          $ref: '#/components/schemas/JourneyWithStatus'
-        coordinates_count:
-          type: integer
-          example: 2
-        coordinates:
-          type: array
-          items:
-            $ref: '#/components/schemas/CoordinateRecord'
-
-    TrackSuccessResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Successfully saved 2 coordinate(s)
-        journey_id:
-          type: integer
-          example: 1
-        inserted_count:
-          type: integer
-          example: 2
-        coordinates:
-          type: array
-          items:
-            $ref: '#/components/schemas/CoordinateRecord'
-
     ErrorResponse:
       type: object
       properties:
@@ -434,18 +405,385 @@ components:
           type: string
           example: Resource not found
 
-    ConflictError:
-      type: object
-      properties:
-        error:
-          type: string
-          example: An active journey already exists for this phone. Please end it before starting a new one.
-        activeJourney:
-          $ref: '#/components/schemas/Journey'
-
     ValidationError:
       type: object
       properties:
         error:
           type: object
           description: Zod validation error details
+
+    DeviceDetails:
+      type: object
+      properties:
+        platform:
+          type: string
+          example: android
+        manufacturer:
+          type: string
+          example: Samsung
+        device_model:
+          type: string
+          example: SM-A135F
+        os_version:
+          type: string
+          example: "14"
+        app_version:
+          type: string
+          example: 1.0.0
+
+    TelemetryConfig:
+      type: object
+      description: >
+        Full telemetry config as received from Frappe. `api_key` is stored
+        server-side only and is NEVER forwarded to the mobile app.
+      properties:
+        source:
+          type: string
+          example: mobile_app
+        endpoint:
+          type: string
+          format: uri
+          description: Real telemetry endpoint (server-side only; never sent to mobile)
+          example: https://telemetry-uat.akshayakalpa.org/v1/ingest/mobile_app
+        api_key:
+          type: string
+          description: "[SERVER ONLY] Stored in DB; never returned to the mobile app."
+          example: "<redacted>"
+        capture_interval_seconds:
+          type: integer
+          example: 10
+        upload_interval_seconds:
+          type: integer
+          example: 30
+        max_records_per_request:
+          type: integer
+          example: 5000
+
+    SanitisedTelemetryConfig:
+      type: object
+      description: >
+        Telemetry config returned to the mobile app. `api_key` has been removed.
+        `endpoint` is rewritten to the backend proxy URL (`/api/frappe/ingest`).
+      properties:
+        source:
+          type: string
+          example: mobile_app
+        endpoint:
+          type: string
+          format: uri
+          description: Our proxy endpoint — the mobile app always uploads here
+          example: https://<your-backend>/api/frappe/ingest
+        capture_interval_seconds:
+          type: integer
+          example: 10
+        upload_interval_seconds:
+          type: integer
+          example: 30
+        max_records_per_request:
+          type: integer
+          example: 5000
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - mobile_number
+        - pin
+        - device_id
+      properties:
+        mobile_number:
+          type: string
+          description: 10-digit Indian mobile number; +91 prefix accepted (BR01)
+          example: "9876543210"
+        pin:
+          type: string
+          description: Predefined 4–8 digit numeric PIN (BR01)
+          example: "1234"
+        device_id:
+          type: string
+          description: Stable app/installation identifier; not IMEI (BR02)
+          example: stable-installation-id
+        device_details:
+          $ref: '#/components/schemas/DeviceDetails'
+
+    RegisterDeviceResponse:
+      type: object
+      properties:
+        driver:
+          type: string
+          example: HR-DRI-2026-00002
+        vehicle:
+          type: string
+          example: AK11AK00001
+        route:
+          type: string
+          example: DR-000001
+        device:
+          type: string
+          example: TD-00001
+        device_id:
+          type: string
+          example: stable-installation-id
+        assignment:
+          type: string
+          example: TDA-00001
+        telemetry:
+          $ref: '#/components/schemas/SanitisedTelemetryConfig'
+
+    StartTrackingRequest:
+      type: object
+      required:
+        - mobile_number
+        - pin
+        - device_id
+        - request_id
+        - odometer_photo
+      properties:
+        mobile_number:
+          type: string
+          example: "9876543210"
+        pin:
+          type: string
+          example: "1234"
+        device_id:
+          type: string
+          example: stable-installation-id
+        request_id:
+          type: string
+          minLength: 8
+          maxLength: 80
+          description: >
+            Stable idempotency key for this Start event. Generate once per user-initiated
+            Start and reuse on every retry so Frappe returns the same trip_id (BR03, BR06).
+          example: start_7f15b8d8_20261012
+        started_at:
+          type: string
+          format: date-time
+          description: Actual UTC time when the delivery boy tapped Start
+          example: "2026-10-12T08:30:00Z"
+        odometer_photo:
+          type: string
+          description: JPEG or PNG as a data URI (base64); decoded size must not exceed 5 MB
+          example: "data:image/jpeg;base64,<base64-data>"
+        device_details:
+          $ref: '#/components/schemas/DeviceDetails'
+
+    StartTrackingResponse:
+      type: object
+      description: >
+        Frappe echoes the full device-assignment context alongside the new trip fields.
+      properties:
+        driver:
+          type: string
+          example: HR-DRI-2026-00002
+        vehicle:
+          type: string
+          example: AK11AK00001
+        route:
+          type: string
+          example: DR-000001
+        device:
+          type: string
+          example: TD-00001
+        device_id:
+          type: string
+          example: stable-installation-id
+        assignment:
+          type: string
+          example: TDA-00001
+        trip_id:
+          type: string
+          example: TRIP-2026-00001
+        status:
+          type: string
+          enum: [In Transit]
+          example: In Transit
+        started_at:
+          type: string
+          format: date-time
+          example: "2026-10-13T08:30:00Z"
+        telemetry:
+          $ref: '#/components/schemas/SanitisedTelemetryConfig'
+        warnings:
+          type: array
+          items:
+            type: string
+          example: []
+
+    StopTrackingRequest:
+      type: object
+      required:
+        - mobile_number
+        - pin
+        - device_id
+        - trip_id
+        - odometer_photo
+      properties:
+        mobile_number:
+          type: string
+          example: "9876543210"
+        pin:
+          type: string
+          example: "1234"
+        device_id:
+          type: string
+          example: stable-installation-id
+        trip_id:
+          type: string
+          description: Trip ID returned by start-tracking
+          example: TRIP-2026-00001
+        stopped_at:
+          type: string
+          format: date-time
+          description: Actual UTC time when the delivery boy tapped Stop
+          example: "2026-10-12T11:45:00Z"
+        odometer_photo:
+          type: string
+          description: End-of-trip odometer as a JPEG or PNG data URI; decoded size <= 5 MB
+          example: "data:image/jpeg;base64,<base64-data>"
+
+    StopTrackingResponse:
+      type: object
+      description: >
+        Frappe echoes the full device-assignment context alongside the completed trip fields.
+      properties:
+        driver:
+          type: string
+          example: HR-DRI-2026-00002
+        vehicle:
+          type: string
+          example: AK11AK00001
+        route:
+          type: string
+          example: DR-000001
+        device:
+          type: string
+          example: TD-00001
+        device_id:
+          type: string
+          example: stable-installation-id
+        assignment:
+          type: string
+          example: TDA-00001
+        trip_id:
+          type: string
+          example: TRIP-2026-00001
+        status:
+          type: string
+          enum: [Completed]
+          example: Completed
+        started_at:
+          type: string
+          format: date-time
+          example: "2026-10-13T08:30:00Z"
+        stopped_at:
+          type: string
+          format: date-time
+          example: "2026-10-13T11:45:00Z"
+        telemetry:
+          $ref: '#/components/schemas/SanitisedTelemetryConfig'
+        warnings:
+          type: array
+          items:
+            type: string
+          example: []
+
+    FrappeGatewayError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Frappe service is temporarily unavailable. Retry with backoff.
+        details:
+          type: string
+          description: Raw Frappe error message for diagnostics (omit from user-facing UI)
+          example: "Network error reaching Frappe at https://..."
+
+    TelemetryReading:
+      type: object
+      required:
+        - tripId
+        - deviceId
+        - latitude
+        - longitude
+        - deviceTime
+      properties:
+        tripId:
+          type: string
+          example: TRIP-2026-00001
+        deviceId:
+          type: string
+          example: stable-installation-id
+        latitude:
+          type: number
+          format: double
+          example: 12.9716
+        longitude:
+          type: number
+          format: double
+          example: 77.5946
+        speedKph:
+          type: number
+          format: double
+          example: 18.5
+        headingDegrees:
+          type: number
+          format: double
+          example: 125.0
+        accuracyMeters:
+          type: number
+          format: double
+          example: 7.2
+        altitudeMeters:
+          type: number
+          format: double
+          example: 910.0
+        batteryPercent:
+          type: number
+          format: double
+          example: 82.0
+        isMock:
+          type: boolean
+          example: false
+        deviceTime:
+          type: string
+          format: date-time
+          description: UTC timestamp recorded on the device (original, never modified)
+          example: "2026-10-13T08:31:10Z"
+
+    TelemetryIngestRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/TelemetryReading'
+
+    TelemetryIngestResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          example: true
+        duplicate:
+          type: boolean
+          description: True when the batch was already accepted (idempotent replay)
+          example: false
+        record_count:
+          type: integer
+          nullable: true
+          example: null
+        body_bytes:
+          type: integer
+          example: 824
+        idempotency_key:
+          type: string
+          example: batch-550e8400-e29b-41d4-a716-446655440000
+        raw_object_key:
+          type: string
+          example: server-generated-object-key
+        correlation_id:
+          type: string
+          example: trace-550e8400-e29b-41d4-a716-446655440001
