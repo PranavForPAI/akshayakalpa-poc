@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { frappeRouter } from './routes/frappe.routes.js';
 import { createSwaggerRouter } from './docs/swagger.js';
@@ -11,8 +11,12 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+// Log incoming request details first before body parsing
 app.use(httpLogger);
+
+// Body parsers with 5MB limit (safety net for large JSON payloads / base64 photos)
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -28,6 +32,31 @@ app.use(createSwaggerRouter());
 
 // Mount Frappe wrapper router under /api/frappe
 app.use('/api/frappe', frappeRouter);
+
+// Centralised error handling middleware
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  if (err?.type === 'entity.too.large' || err?.status === 413) {
+    logger.warn('Request payload exceeded size limit', {
+      error: err.message,
+      limit: err.limit,
+      length: err.length,
+    });
+    res.status(413).json({
+      error: 'Payload Too Large',
+      message:
+        'Request payload exceeds the maximum allowed limit (5 MB). For odometer photos, multipart/form-data is recommended.',
+    });
+    return;
+  }
+
+  logger.error('Unhandled request error', {
+    error: err?.message ?? String(err),
+    stack: err?.stack,
+  });
+  res.status(err?.status || 500).json({
+    error: err?.message || 'Internal Server Error',
+  });
+});
 
 const server = app.listen(port, () => {
   logger.info(`Server is running at http://localhost:${port}`);
@@ -45,3 +74,4 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
