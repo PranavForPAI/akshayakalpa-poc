@@ -18,30 +18,41 @@ import logger from '../logger.js';
 // Frappe-specific error classes
 // ---------------------------------------------------------------------------
 
-export class FrappeAuthError extends Error {
-  constructor(message: string) {
+export class FrappeError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public responseBody?: any
+  ) {
     super(message);
+    this.name = 'FrappeError';
+  }
+}
+
+export class FrappeAuthError extends FrappeError {
+  constructor(message: string, statusCode?: number, responseBody?: any) {
+    super(message, statusCode, responseBody);
     this.name = 'FrappeAuthError';
   }
 }
 
-export class FrappeValidationError extends Error {
-  constructor(message: string) {
-    super(message);
+export class FrappeValidationError extends FrappeError {
+  constructor(message: string, statusCode?: number, responseBody?: any) {
+    super(message, statusCode, responseBody);
     this.name = 'FrappeValidationError';
   }
 }
 
-export class FrappeNotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
+export class FrappeNotFoundError extends FrappeError {
+  constructor(message: string, statusCode?: number, responseBody?: any) {
+    super(message, statusCode, responseBody);
     this.name = 'FrappeNotFoundError';
   }
 }
 
-export class FrappeServerError extends Error {
-  constructor(message: string, public statusCode?: number) {
-    super(message);
+export class FrappeServerError extends FrappeError {
+  constructor(message: string, statusCode?: number, responseBody?: any) {
+    super(message, statusCode, responseBody);
     this.name = 'FrappeServerError';
   }
 }
@@ -51,6 +62,112 @@ export class DeviceKeyNotFoundError extends Error {
     super(`No telemetry key found for device "${deviceId}". Register the device first.`);
     this.name = 'DeviceKeyNotFoundError';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers: parse & extract Frappe error messages
+// ---------------------------------------------------------------------------
+
+/**
+ * Strips basic HTML tags and unescapes common HTML entities.
+ */
+function stripHtml(input: string): string {
+  return input
+    .replace(/<[^>]*>/g, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .trim();
+}
+
+/**
+ * Parses Frappe's `_server_messages` header or body field.
+ * Frappe typically formats `_server_messages` as a JSON string containing
+ * a list of JSON-stringified objects: `"[{\"message\": \"...\", \"title\": \"...\"}]"`
+ */
+export function parseFrappeServerMessages(rawMessages: unknown): string[] {
+  if (!rawMessages) return [];
+  try {
+    let list: any = rawMessages;
+    // Unpack stringified JSON layers (handles multiple escapes if nested)
+    while (typeof list === 'string') {
+      try {
+        list = JSON.parse(list);
+      } catch {
+        break;
+      }
+    }
+
+    if (Array.isArray(list)) {
+      const extracted = list
+        .map((item) => {
+          let parsed: any = item;
+          while (typeof parsed === 'string') {
+            try {
+              parsed = JSON.parse(parsed);
+            } catch {
+              break;
+            }
+          }
+          if (parsed && typeof parsed === 'object') {
+            return parsed.message ?? parsed.title ?? JSON.stringify(parsed);
+          }
+          return String(parsed);
+        })
+        .map((text) => (typeof text === 'string' ? stripHtml(text) : String(text)))
+        .filter((text) => text.length > 0);
+
+      return Array.from(new Set(extracted));
+    }
+  } catch {
+    if (typeof rawMessages === 'string' && rawMessages.trim()) {
+      return [stripHtml(rawMessages)];
+    }
+  }
+  return [];
+}
+
+/**
+ * Extracts a human-readable error description from a Frappe error response body.
+ */
+export function extractFrappeErrorMessage(body: any, status: number): string {
+  if (!body) {
+    return `Frappe returned HTTP ${status}`;
+  }
+
+  // 1. Frappe server messages (e.g. from frappe.throw or frappe.msgprint)
+  if (body._server_messages) {
+    const messages = parseFrappeServerMessages(body._server_messages);
+    if (messages.length > 0) {
+      return messages.join('; ');
+    }
+  }
+
+  // 2. Direct message field
+  if (typeof body.message === 'string' && body.message.trim().length > 0) {
+    return stripHtml(body.message);
+  }
+  if (body.message && typeof body.message === 'object') {
+    if (typeof body.message.message === 'string' && body.message.message.trim().length > 0) {
+      return stripHtml(body.message.message);
+    }
+  }
+
+  // 3. Exception string (e.g. "frappe.exceptions.ValidationError: Vehicle KA-01-AB-1234 already has active trip")
+  if (typeof body.exception === 'string' && body.exception.trim().length > 0) {
+    const cleaned = stripHtml(body.exception);
+    const match = cleaned.match(/^[a-zA-Z0-9_.]*(?:Error|Exception):\s*(.+)$/s);
+    return match ? match[1].trim() : cleaned;
+  }
+
+  // 4. Exception type fallback
+  if (typeof body.exc_type === 'string' && body.exc_type.trim().length > 0) {
+    return `Frappe ${body.exc_type} (HTTP ${status})`;
+  }
+
+  return `Frappe returned HTTP ${status}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -270,11 +387,13 @@ export class FrappeService {
 
     const latencyMs = Date.now() - startMs;
 
+    let rawText = '';
     let body: any;
     try {
-      body = await response.json();
+      rawText = await response.text();
+      body = JSON.parse(rawText);
     } catch {
-      body = { message: response.statusText };
+      body = { message: rawText || response.statusText };
     }
 
     if (response.ok) {
@@ -290,12 +409,7 @@ export class FrappeService {
       return envelope.message;
     }
 
-    const serverMessage: string =
-      typeof body?.message === 'string'
-        ? body.message
-        : typeof body?.exception === 'string'
-        ? body.exception
-        : `Frappe returned HTTP ${response.status}`;
+    const serverMessage = extractFrappeErrorMessage(body, response.status);
 
     logger.warn('Frappe upstream error response', {
       type: 'frappe_error_response',
@@ -303,19 +417,20 @@ export class FrappeService {
       statusCode: response.status,
       latencyMs,
       serverMessage,
+      errorResponse: this.redactSensitive(body),
     });
 
     switch (response.status) {
       case 400:
       case 417:
-        throw new FrappeValidationError(serverMessage);
+        throw new FrappeValidationError(serverMessage, response.status, body);
       case 401:
       case 403:
-        throw new FrappeAuthError(serverMessage);
+        throw new FrappeAuthError(serverMessage, response.status, body);
       case 404:
-        throw new FrappeNotFoundError(serverMessage);
+        throw new FrappeNotFoundError(serverMessage, response.status, body);
       default:
-        throw new FrappeServerError(serverMessage, response.status);
+        throw new FrappeServerError(serverMessage, response.status, body);
     }
   }
 
@@ -428,11 +543,13 @@ export class FrappeService {
 
     const latencyMs = Date.now() - startMs;
 
+    let rawText = '';
     let body: any;
     try {
-      body = await response.json();
+      rawText = await response.text();
+      body = JSON.parse(rawText);
     } catch {
-      body = {};
+      body = rawText ? { raw: rawText } : {};
     }
 
     const level = response.ok ? 'info' : 'warn';

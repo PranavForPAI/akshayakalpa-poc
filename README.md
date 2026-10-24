@@ -1,151 +1,279 @@
-# GPS Journey Tracking Backend (POC)
+# Akshayakalpa Telemetry & Journey Tracking System
 
-Lightweight Express & TypeScript backend with **Drizzle ORM**, **Zod** schema validation, automated SQL migrations, **OpenAPI 3.0 / Swagger UI documentation**, and **SOLID-compliant architecture** to track live mobile device GPS coordinates during journeys.
+Production-ready integration backend and analytics dashboard for the Akshayakalpa Delivery Management System.
 
----
-
-## 📖 OpenAPI / Swagger Documentation
-
-An interactive Swagger UI and raw OpenAPI spec are built directly into the server:
-
-- **Swagger UI Interactive Docs**: [http://localhost:3000/docs](http://localhost:3000/docs)
-- **Raw OpenAPI 3.0 JSON Spec**: [http://localhost:3000/docs/json](http://localhost:3000/docs/json)
-- **Specification Source File**: [`src/docs/openapi.yaml`](file:///d:/Work/askhayakalpa-poc-be/src/docs/openapi.yaml) (can be directly imported into Postman, Insomnia, or Swagger Editor)
-
-Mobile developers can test requests directly inside the browser or generate client SDKs using OpenAPI generator tools.
+Acts as a high-throughput, non-blocking telemetry proxy between mobile delivery drivers, **Frappe**, and the upstream **telemetry ingestion service**, with an LRU **Redis** key-value store, **PostgreSQL (Prisma ORM)** debug audit persistence, and an interactive **React + Mappls (MapmyIndia)** analytics dashboard.
 
 ---
 
-## 🏛️ Architecture & SOLID Principles
-
-The codebase is organized in decoupled layers:
+## 🏛️ System Architecture
 
 ```
-src/
-├── controllers/
-│   └── journey.controller.ts       # HTTP handling, formatting responses & status codes
-├── db/
-│   ├── index.ts                    # Drizzle ORM client & pg connection pool
-│   ├── migrate.ts                  # Migration runner for automated code-based DB schema changes
-│   └── schema.ts                   # Drizzle Schema (journey & coordinates)
-├── middlewares/
-│   └── validate.middleware.ts      # Generic Express middleware for Zod validation
-├── repositories/
-│   └── journey.repository.ts       # Data access interfaces & Drizzle implementations
-├── routes/
-│   └── journey.routes.ts           # Clean router definitions with middleware wiring
-├── schemas/
-│   └── journey.schema.ts           # Zod validation schemas & inferred DTO types
-└── index.ts                        # App initialization & migration execution
+                    Internet (HTTPS)
+                           │
+                           ▼
+          ┌──────────────────────────────────┐
+          │     Caddy Web Server / Proxy     │
+          │  https://karivena.admin.polynomial.ai
+          └────────────────┬─────────────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+     Path: / (SPA)               Path: /api/*
+              │                         │
+              ▼                         ▼
+   ┌──────────────────────┐  ┌──────────────────────────────────┐
+   │    Frontend (PM2)    │  │       Backend (Docker)           │
+   │  React + Vite + Mappls│  │      Node.js + Express           │
+   │   Port: 5173 (Host)  │  │      Port: 3000 (Docker)         │
+   └──────────────────────┘  └──────┬────────────────┬──────────┘
+                                    │                │
+                                    ▼                ▼
+                         ┌────────────────┐   ┌────────────────┐
+                         │   PostgreSQL   │   │     Redis      │
+                         │    (Prisma)    │   │  (LRU Cache)   │
+                         │   Port: 5432   │   │   Port: 6379   │
+                         └────────────────┘   └────────────────┘
 ```
 
-### SOLID Implementation:
-- **Single Responsibility Principle (SRP)**:
-  - `schemas`: Exclusively responsible for validation rules and DTO types.
-  - `middlewares`: Reusable request validation without touching business logic.
-  - `controllers`: Handle HTTP request unpacking, response headers, and status mapping.
-  - `services`: Contain domain rules (e.g. only one active journey per phone, coordinate attachment).
-  - `repositories`: Pure database queries without business assumptions.
-- **Open/Closed Principle (OCP)** & **Liskov Substitution Principle (LSP)**:
-  - Repositories are defined behind interfaces (`IJourneyRepository`, `ICoordinateRepository`).
-  - Swapping PostgreSQL/Drizzle for an in-memory test repository or another database engine requires zero modifications to service logic.
-- **Interface Segregation Principle (ISP)**:
-  - Repository interfaces are broken into cohesive contracts (`IJourneyRepository` and `ICoordinateRepository`).
-- **Dependency Inversion Principle (DIP)**:
-  - `JourneyService` and `JourneyController` depend on abstractions rather than concrete classes, enabling painless dependency injection and unit testing.
+### Components:
+* **Backend (`akshayakalpa-backend`)**: Containerized Express/TypeScript service that handles device registration, tracking lifecycle, and telemetry ingest filtering (excludes points lacking GPS fixes before forwarding upstream).
+* **Redis (`akshayakalpa-redis`)**: High-speed cache storing device-to-API-key mappings with an automatic Least Recently Used (LRU) sorted-set eviction policy.
+* **PostgreSQL (`akshayakalpa-postgres`)**: Stores device keys, delivery trips, and raw coordinate readings with network/sensor metadata (`DEBUG_MODE=true`).
+* **Frontend (`akshayakalpa-frontend`)**: React 19 + TypeScript + Vite SPA served via **PM2** displaying live delivery routes, point metadata inspection, and JSON export.
+* **Caddy**: Reverse proxy managing SSL/TLS, routing `/api/*` to the backend container and `/` to the frontend.
 
 ---
 
-## 🗄️ Database & Migrations (Drizzle ORM)
+## 📋 Prerequisites
 
-All database tables and relationships are defined via code in [`src/db/schema.ts`](file:///d:/Work/askhayakalpa-poc-be/src/db/schema.ts):
-
-- **`journey`**: `id`, `phone`, `start`, `stop`, indexed on `(phone, stop)`
-- **`coordinates`**: `id`, `journey_id`, `latitude`, `longitude`, `sequence`, `recorded_at`, foreign key referencing `journey.id` (cascade delete), indexed on `(journey_id, sequence)`
-
-### Migration Commands:
-- `npm run db:generate`: Generates SQL migration files in `drizzle/` from changes in `schema.ts`.
-- `npm run db:migrate`: Executes pending SQL migrations against your PostgreSQL instance.
-- Migrations also run automatically on server boot (`src/index.ts`).
+Before setting up the VM or server, ensure you have installed:
+* **Docker & Docker Compose** (v24+)
+* **Node.js** (v20+ LTS) and **npm**
+* **PM2** (`npm install -g pm2`)
+* **Caddy Web Server** (`sudo apt install -y caddy` on Debian/Ubuntu)
 
 ---
 
-## 📋 API Endpoints
+## ⚙️ Environment Configuration
 
-### 1. Start Journey
-`POST /start` or `POST /api/start`
-- **Body**:
-  ```json
-  {
-    "phone": "+919876543210",
-    "start": "2026-10-12T12:00:00.000Z" // Optional, defaults to now
-  }
-  ```
-- **Responses**:
-  - `201 Created`: Journey created.
-  - `409 Conflict`: If an active journey already exists for this phone.
+### 1. Backend Environment: `.env`
+Create a `.env` file in the project root:
 
-### 2. End Journey
-`POST /end` or `POST /api/end`
-- **Body**:
-  ```json
-  {
-    "phone": "+919876543210",
-    "stop": "2026-10-12T13:00:00.000Z" // Optional, defaults to now
-  }
-  ```
-- **Responses**:
-  - `200 OK`: Active journey ended.
-  - `404 Not Found`: No active journey found for this phone.
+```bash
+cp .env.example .env
+```
 
-### 3. Track Coordinates
-`POST /track` or `POST /api/track`
-- Ingests either a **single coordinate** or an **array of coordinates** (for mobile offline caching / batch sync when reconnection happens):
-  ```json
-  {
-    "phone": "+919876543210",
-    "coordinates": [
-      {
-        "latitude": 12.971598,
-        "longitude": 77.594562,
-        "sequence": 1,
-        "recorded_at": "2026-10-12T12:00:10.000Z"
-      },
-      {
-        "latitude": 12.972100,
-        "longitude": 77.595100,
-        "sequence": 2
-      }
-    ]
-  }
-  ```
+Configure the following variables in `.env`:
 
-### 4. Get Current Active Journey
-`GET /journey/current?phone=+919876543210` or `GET /api/journey/current?phone=+919876543210`
-- Returns active journey and all coordinates sorted by sequence.
+```env
+PORT=3000
 
-### 5. Get All Journeys
-`GET /journeys` or `GET /journeys?phone=+919876543210`
-- Returns list of journeys with status (`active` or `completed`).
+# Redis Cache
+REDIS_URL=redis://localhost:6379
+REDIS_LRU_CAP=50
 
-### 6. Get Journey by ID
-`GET /journey/:id`
-- Returns a specific journey and its coordinates.
+# Upstream Frappe Endpoint
+FRAPPE_BASE_URL=https://akshayakalpa-pm-test.nvi.frappe.cloud
+
+# PostgreSQL Credentials (pulled automatically by Docker Compose)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=akshayakalpa_db
+
+# Direct connection string for host/local scripts
+DATABASE_URL=postgresql://postgres:your_secure_password@localhost:5432/akshayakalpa_db
+
+# Audit Logging (set to true to persist trips & coordinates in Postgres)
+DEBUG_MODE=true
+```
+
+> **Note**: In Docker Compose, the backend container automatically routes `DATABASE_URL` to the internal `postgres:5432` container and `REDIS_URL` to `redis:6379`.
 
 ---
 
-## ⚙️ Quick Start
+### 2. Frontend Environment: `frontend/.env`
+Create a `.env` file in the `frontend` folder:
 
-1. Install dependencies:
+```bash
+cd frontend
+cp .env.example .env
+```
+
+Configure:
+
+```env
+# Mappls (MapmyIndia) Web SDK Key
+VITE_MAPPLS_KEY=your_mappls_static_key
+
+# Leave empty for production (Caddy proxies /api directly to the backend)
+VITE_API_BASE_URL=
+```
+
+---
+
+## 🚀 Step-by-Step Deployment Guide
+
+### Step 1: Start Backend, PostgreSQL & Redis (Docker Compose)
+
+From the project root directory:
+
+```bash
+# Build images and start containers in the background
+docker compose up -d --build
+```
+
+#### What happens automatically on startup:
+1. `postgres:16-alpine` and `redis:7-alpine` spin up with healthchecks.
+2. `docker-entrypoint.sh` runs inside the backend container and tests the PostgreSQL connection.
+3. Once Postgres is ready, it automatically executes:
    ```bash
-   npm install
+   npx prisma db push --skip-generate
    ```
-2. Set your PostgreSQL URL in `.env`:
-   ```env
-   PORT=3000
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tracking_db
-   ```
-3. Run the development server (auto-runs migrations and starts listening):
+   This synchronizes all schema models (`device_keys`, `trips`, `coordinates`) without failing if tables already exist.
+4. The Node.js production server starts on port `3000` (bound to `127.0.0.1:3000`).
+
+#### Verify backend status:
+```bash
+# Check container status
+docker compose ps
+
+# View backend startup logs
+docker compose logs -f backend
+
+# Verify health endpoint
+curl http://127.0.0.1:3000/health
+```
+Expected output:
+```json
+{"status":"healthy","timestamp":"...","redis":"connected"}
+```
+
+---
+
+### Step 2: Build and Deploy the Frontend (PM2)
+
+The frontend is served as a high-performance Single Page Application (SPA) using PM2 on port `5173`.
+
+```bash
+cd frontend
+
+# Install frontend dependencies
+npm install
+
+# Build production assets into frontend/dist
+npm run build
+
+# Start the SPA server with PM2
+pm2 start ecosystem.config.cjs
+
+# Save PM2 process list to persist across server reboots
+pm2 save
+pm2 startup
+```
+
+#### Verify frontend status:
+```bash
+pm2 status
+pm2 logs akshayakalpa-frontend
+```
+
+---
+
+### Step 3: Configure Caddy Reverse Proxy
+
+A production [`Caddyfile`](Caddyfile) is included in the project root.
+
+1. Copy or link the configuration to `/etc/caddy/Caddyfile`:
    ```bash
-   npm run dev
+   sudo cp Caddyfile /etc/caddy/Caddyfile
    ```
+
+2. The configuration maps:
+   * `https://karivena.admin.polynomial.ai/` ➔ Frontend PM2 (`127.0.0.1:5173`)
+   * `https://karivena.admin.polynomial.ai/api/*` ➔ Backend Container (`127.0.0.1:3000`)
+   * `https://karivena.admin.polynomial.ai/docs*` ➔ Swagger UI (`127.0.0.1:3000`)
+   * `https://karivena.admin.polynomial.ai/health` ➔ Health check (`127.0.0.1:3000`)
+
+3. Validate and reload Caddy:
+   ```bash
+   sudo caddy validate --config /etc/caddy/Caddyfile
+   sudo systemctl reload caddy
+   ```
+
+Caddy will automatically provision and renew trusted SSL/TLS certificates via Let's Encrypt / ZeroSSL.
+
+---
+
+## 🛠️ Local Development (Without Docker)
+
+If you prefer to run services locally during development:
+
+### 1. Run Local PostgreSQL & Redis
+Ensure PostgreSQL is running locally on port `5432` and Redis on `6379`.
+
+### 2. Push Schema to Local Postgres
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+### 3. Start Backend in Dev Mode
+```bash
+npm run dev
+# Starts on http://localhost:3000 with tsx hot-reloading
+```
+
+### 4. Start Frontend in Dev Mode
+```bash
+cd frontend
+npm run dev
+# Starts on http://localhost:5173 with Vite HMR
+# In dev, Vite automatically proxies /api requests to http://localhost:3000
+```
+
+---
+
+## 📡 API Reference
+
+### 1. Delivery Tracking & Ingest (`/api/frappe`)
+* `POST /api/frappe/register-device`: Registers driver device and returns temporary telemetry API key.
+* `POST /api/frappe/start-tracking`: Starts trip; caches device API key in Redis and sets trip state in Postgres.
+* `POST /api/frappe/stop-tracking`: Ends trip; marks trip `Completed` in Postgres.
+* `POST /api/frappe/ingest`: High-frequency mobile telemetry ingestion.
+  * Filters out readings without latitude/longitude before proxying to the upstream telemetry service.
+  * Responds with synthetic `202 Accepted` if all readings are no-fix/skipped.
+  * Asynchronously persists complete audit batch to PostgreSQL (`DEBUG_MODE=true`).
+
+### 2. Analytics Dashboard (`/api/dashboard`)
+* `GET /api/dashboard/trips`: Paginated trip list with status filter (`In Transit`, `Completed`) and text search (`search=TRIP...`).
+* `GET /api/dashboard/trips/:tripId/points`: Chronological point sequence for plotting on the map.
+* `GET /api/dashboard/trips/:tripId/export`: Full JSON dump of trip details and all coordinates for offline analysis.
+
+### 3. Interactive Documentation
+* **Swagger UI**: `https://karivena.admin.polynomial.ai/docs`
+* **Health Check**: `https://karivena.admin.polynomial.ai/health`
+
+---
+
+## 🛑 Useful Operational Commands
+
+```bash
+# Restart backend container after code update
+docker compose up -d --build backend
+
+# View live backend application logs
+docker compose logs -f --tail=100 backend
+
+# View live database logs
+docker compose logs -f postgres
+
+# Restart frontend application in PM2
+pm2 restart akshayakalpa-frontend
+
+# Inspect Redis keys directly
+docker exec -it akshayakalpa-redis redis-cli keys "device_key:*"
+
+# Inspect PostgreSQL tables directly
+docker exec -it akshayakalpa-postgres psql -U postgres -d akshayakalpa_db -c "\dt"
+```

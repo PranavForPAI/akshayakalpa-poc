@@ -268,24 +268,29 @@ export class FrappeController {
     }
     if (error instanceof FrappeAuthError) {
       res.status(403).json({
-        error: 'Authentication or authorisation failed. Verify mobile number and PIN.',
+        error: error.message || 'Authentication or authorisation failed. Verify mobile number and PIN.',
+        details: error.responseBody ?? undefined,
       });
       return;
     }
     if (error instanceof FrappeValidationError) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({
+        error: error.message,
+        details: error.responseBody ?? undefined,
+      });
       return;
     }
     if (error instanceof FrappeNotFoundError) {
       res.status(404).json({
-        error: 'Frappe API or resource not found. Check integration configuration.',
+        error: error.message || 'Frappe API or resource not found. Check integration configuration.',
+        details: error.responseBody ?? undefined,
       });
       return;
     }
     if (error instanceof FrappeServerError) {
       res.status(502).json({
-        error: 'Upstream service is temporarily unavailable. Retry with backoff.',
-        details: error.message,
+        error: error.message || 'Upstream service is temporarily unavailable. Retry with backoff.',
+        details: error.responseBody ?? error.message,
       });
       return;
     }
