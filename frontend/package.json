@@ -13,6 +13,7 @@
     "@tanstack/react-query": "^5.104.5",
     "@types/leaflet": "^1.9.22",
     "leaflet": "^1.9.4",
+    "mappls-web-maps": "^3.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zustand": "^5.0.16"

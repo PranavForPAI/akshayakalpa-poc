@@ -1,44 +1,53 @@
-// Minimal typings for the parts of the Mappls (MapmyIndia) Web SDK we use.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export interface MapplsLatLng {
-  lat: number;
-  lng: number;
-}
+import { mappls } from 'mappls-web-maps';
 
-export interface MapplsSdk {
-  Map: new (el: string | HTMLElement, opts: Record<string, unknown>) => any;
-  Marker: new (opts: Record<string, unknown>) => any;
-  Polyline: new (opts: Record<string, unknown>) => any;
-  remove: (opts: { map: any; layer: any }) => void;
-}
+export const mapplsSdk = new mappls();
 
-declare global {
-  interface Window {
-    mappls?: MapplsSdk;
-  }
-}
+let initialized = false;
+let initPromise: Promise<void> | null = null;
 
-let loader: Promise<MapplsSdk> | null = null;
-
-/** Loads the Mappls Web SDK once and resolves with the global `mappls` object. */
-export function loadMappls(): Promise<MapplsSdk> {
-  if (window.mappls) return Promise.resolve(window.mappls);
-  if (loader) return loader;
+/**
+ * Initializes the Mappls Web Maps SDK.
+ * Includes a timeout so the UI never hangs on a blank screen if MapmyIndia fails/401s.
+ */
+export function initMappls(timeoutMs = 2500): Promise<void> {
+  if (initialized) return Promise.resolve();
+  if (initPromise) return initPromise;
 
   const key = import.meta.env.VITE_MAPPLS_KEY;
-  if (!key) return Promise.reject(new Error('VITE_MAPPLS_KEY is not set'));
+  if (!key) {
+    return Promise.reject(new Error('VITE_MAPPLS_KEY is not set in frontend/.env'));
+  }
 
-  loader = new Promise<MapplsSdk>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://apis.mappls.com/advancedmaps/api/${key}/map_sdk?layer=vector&v=3.0`;
-    script.async = true;
-    script.onload = () =>
-      window.mappls ? resolve(window.mappls) : reject(new Error('Mappls SDK loaded but unavailable'));
-    script.onerror = () => {
-      loader = null;
-      reject(new Error('Failed to load Mappls SDK — check VITE_MAPPLS_KEY and network'));
-    };
-    document.head.appendChild(script);
+  const loadPromise = new Promise<void>((resolve, reject) => {
+    try {
+      mapplsSdk.initialize(
+        key,
+        {
+          map: true,
+          version: '3.0',
+        },
+        () => {
+          initialized = true;
+          resolve();
+        }
+      );
+    } catch (err: any) {
+      initPromise = null;
+      reject(err);
+    }
   });
-  return loader;
+
+  const timerPromise = new Promise<void>((_, reject) => {
+    setTimeout(() => {
+      if (!initialized) {
+        initPromise = null;
+        reject(new Error(`Mappls SDK load timed out after ${timeoutMs}ms (key invalid, expired, or network blocked)`));
+      }
+    }, timeoutMs);
+  });
+
+  initPromise = Promise.race([loadPromise, timerPromise]);
+  return initPromise;
 }
+
+export default mapplsSdk;
