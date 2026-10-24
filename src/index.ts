@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { frappeRouter } from './routes/frappe.routes.js';
+import { dashboardRouter } from './routes/dashboard.routes.js';
 import { createSwaggerRouter } from './docs/swagger.js';
 import { httpLogger } from './middlewares/http-logger.middleware.js';
 import logger from './logger.js';
@@ -32,6 +33,9 @@ app.use(createSwaggerRouter());
 
 // Mount Frappe wrapper router under /api/frappe
 app.use('/api/frappe', frappeRouter);
+
+// Mount Analytics Dashboard router under /api/dashboard
+app.use('/api/dashboard', dashboardRouter);
 
 // Centralised error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

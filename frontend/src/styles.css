@@ -28,6 +28,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .export { display: flex; align-items: center; gap: 8px; }
 .map-wrap { position: relative; flex: 1; min-height: 0; }
 .map-container, .map { position: absolute; inset: 0; }
+.map-fallback-badge { position: absolute; top: 12px; left: 12px; z-index: 1000; background: rgba(255, 255, 255, 0.96); border: 1px solid #f59e0b; color: #b45309; font-size: 0.75rem; font-weight: 500; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.custom-map-marker { background: transparent !important; border: none !important; }
 .map-error { position: absolute; inset: 0; display: grid; place-items: center; background: #fff; text-align: center; padding: 24px; }
 .point-card { position: absolute; top: 12px; right: 12px; z-index: 5; width: 280px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.15); display: flex; flex-direction: column; gap: 8px; }
 .point-card-head { display: flex; gap: 8px; align-items: center; }
