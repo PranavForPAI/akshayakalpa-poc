@@ -240,7 +240,7 @@ export class FrappeService {
   private readonly baseUrl: string;
   private readonly siteName: string | undefined;
   /** Public-facing proxy path the mobile app will call for telemetry uploads */
-  private readonly proxyIngestPath = '/api/frappe/ingest';
+  private readonly proxyIngestPath = '/api/api/frappe/ingest';
 
   constructor(
     private readonly deviceKeyRepo: IDeviceKeyRepository = new RedisDeviceKeyRepository()
