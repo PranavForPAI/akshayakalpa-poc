@@ -146,21 +146,48 @@ export interface StopTrackingResponse {
 
 // ---------------------------------------------------------------------------
 // 6.4 Telemetry ingest proxy request (mobile → our backend → telemetry service)
+//
+// latitude and longitude are OPTIONAL — the mobile sends every capture attempt
+// including ones with no GPS fix (captureSource: 'skipped' | 'failed').
+// Our proxy filters out no-GPS readings before forwarding to the upstream
+// telemetry service.
 // ---------------------------------------------------------------------------
 
 export const telemetryReadingSchema = z.object({
   tripId: z.string().min(1, 'tripId is required'),
   deviceId: z.string().min(1, 'deviceId is required'),
-  latitude: z.number(),
-  longitude: z.number(),
+  /** Absent (not null) when captureSource is 'skipped' or 'failed'. */
+  latitude: z.number().optional(),
+  /** Absent (not null) when captureSource is 'skipped' or 'failed'. */
+  longitude: z.number().optional(),
   speedKph: z.number().optional(),
   headingDegrees: z.number().optional(),
   accuracyMeters: z.number().optional(),
   altitudeMeters: z.number().optional(),
   batteryPercent: z.number().optional(),
   isMock: z.boolean().optional(),
+  /** UTC ISO-8601 timestamp of the fix (or capture attempt time for carried/skipped). */
   deviceTime: z.string().datetime({ message: 'deviceTime must be an ISO-8601 UTC datetime' }),
+  /** Why this reading was captured (or not). */
+  captureSource: z
+    .enum(['gps', 'current', 'last_known', 'carried', 'skipped', 'failed'])
+    .optional(),
+  /** App lifecycle state at capture time. */
+  appState: z.enum(['foreground', 'background', 'terminated']).optional(),
+  /** Active network type string from the OS (may be a combo like 'Wi-Fi + VPN'). */
+  networkType: z.string().optional(),
+  /** Whether the API hostname resolved within 2 s. */
+  internetAvailable: z.boolean().optional(),
+  /** Device-level location switch state (absent if unreadable). */
+  locationServiceOn: z.boolean().optional(),
+  /** Android location permission grant level. */
+  locationPermission: z
+    .enum(['Always', 'While in use', 'Denied', 'Unknown'])
+    .optional(),
 });
+
+/** Type of a single reading as received from the mobile app (full, including no-GPS). */
+export type TelemetryReadingDto = z.infer<typeof telemetryReadingSchema>;
 
 export const telemetryIngestSchema = z.object({
   data: z
@@ -169,4 +196,5 @@ export const telemetryIngestSchema = z.object({
 });
 
 export type TelemetryIngestDto = z.infer<typeof telemetryIngestSchema>;
+
 

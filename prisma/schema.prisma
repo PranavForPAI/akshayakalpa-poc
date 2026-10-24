@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Device key metadata — one row per physical device, upserted on every
+// register-device / start-tracking / stop-tracking success.
+// The raw api_key is intentionally NOT stored here; it lives in Redis only.
+// ---------------------------------------------------------------------------
+model DeviceKey {
+  id                   Int      @id @default(autoincrement())
+  /// Stable app/device identifier — matches X-Device-ID header
+  deviceId             String   @unique @map("device_id")
+  /// Frappe driver doctype name (e.g. HR-DRI-2026-00002)
+  driver               String?
+  vehicle              String?
+  route                String?
+  /// Frappe Device doctype name (distinct from deviceId)
+  deviceName           String?  @map("device_name")
+  assignment           String?
+  captureIntervalSecs  Int?     @map("capture_interval_seconds")
+  uploadIntervalSecs   Int?     @map("upload_interval_seconds")
+  maxRecordsPerRequest Int?     @map("max_records_per_request")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  trips                Trip[]
+
+  @@map("device_keys")
+}
+
+// ---------------------------------------------------------------------------
+// Trip — one row per delivery trip.
+// Created/updated on start-tracking and stop-tracking success.
+// Also auto-created (minimal) on first ingest if missing.
+// ---------------------------------------------------------------------------
+model Trip {
+  id          Int          @id @default(autoincrement())
+  /// e.g. TRIP-2026-00047
+  tripId      String       @unique @map("trip_id")
+  deviceId    String       @map("device_id")
+  deviceKey   DeviceKey    @relation(fields: [deviceId], references: [deviceId])
+  /// "In Transit" | "Completed"
+  status      String       @default("In Transit")
+  startedAt   DateTime?    @map("started_at")
+  stoppedAt   DateTime?    @map("stopped_at")
+  driver      String?
+  vehicle     String?
+  route       String?
+  assignment  String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  coordinates Coordinate[]
+
+  @@map("trips")
+}
+
+// ---------------------------------------------------------------------------
+// Coordinate — one row per reading from every ingest batch.
+// Includes readings with NO GPS fix (skipped/failed) for full audit trail.
+// Dedup is enforced via (idempotency_key, batch_index) so retries are safe.
+// ---------------------------------------------------------------------------
+model Coordinate {
+  id                 Int      @id @default(autoincrement())
+  tripId             String   @map("trip_id")
+  trip               Trip     @relation(fields: [tripId], references: [tripId])
+  deviceId           String   @map("device_id")
+  /// true when both latitude and longitude were present in the reading
+  hasGps             Boolean  @map("has_gps")
+  latitude           Float?
+  longitude          Float?
+  speedKph           Float?   @map("speed_kph")
+  headingDegrees     Float?   @map("heading_degrees")
+  accuracyMeters     Float?   @map("accuracy_meters")
+  altitudeMeters     Float?   @map("altitude_meters")
+  batteryPercent     Float?   @map("battery_percent")
+  isMock             Boolean  @default(false) @map("is_mock")
+  deviceTime         DateTime @map("device_time")
+  /// gps | current | last_known | carried | skipped | failed
+  captureSource      String?  @map("capture_source")
+  /// foreground | background | terminated
+  appState           String?  @map("app_state")
+  /// e.g. Wi-Fi, Mobile data, No network, Wi-Fi + VPN …
+  networkType        String?  @map("network_type")
+  internetAvailable  Boolean? @map("internet_available")
+  locationServiceOn  Boolean? @map("location_service_on")
+  /// Always | While in use | Denied | Unknown
+  locationPermission String?  @map("location_permission")
+  /// true if this reading was actually forwarded to the upstream telemetry service
+  wasForwarded       Boolean  @default(false) @map("was_forwarded")
+  /// HTTP status from upstream (null when not forwarded)
+  upstreamStatus     Int?     @map("upstream_status")
+  /// accepted field from upstream response (null when not forwarded)
+  upstreamAccepted   Boolean? @map("upstream_accepted")
+  /// Batch-level Idempotency-Key from the request header
+  idempotencyKey     String   @map("idempotency_key")
+  /// 0-based position of this reading within the batch — enables dedup on retry
+  batchIndex         Int      @map("batch_index")
+  serverReceivedAt   DateTime @default(now()) @map("server_received_at")
+
+  /// Composite unique: same idempotency key + same position = same reading on retry
+  @@unique([idempotencyKey, batchIndex])
+  @@index([tripId])
+  @@index([deviceId])
+  @@index([deviceTime])
+  @@map("coordinates")
+}

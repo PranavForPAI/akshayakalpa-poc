@@ -23,6 +23,10 @@ export interface IDeviceKeyRepository {
 export class RedisDeviceKeyRepository implements IDeviceKeyRepository {
   private readonly memoryStore = new Map<string, DeviceApiKeyRecord>();
   private readonly keyPrefix = 'device_key:';
+  /** Sorted-set key used for LRU tracking; score = Date.now() */
+  private readonly lruSetKey = 'device_key_lru';
+  /** Maximum number of device keys to keep in Redis. Oldest are evicted first. */
+  private readonly lruCap = parseInt(process.env.REDIS_LRU_CAP ?? '50', 10);
 
   private formatKey(deviceId: string): string {
     return `${this.keyPrefix}${deviceId}`;
@@ -49,6 +53,7 @@ export class RedisDeviceKeyRepository implements IDeviceKeyRepository {
     const client = redisManager.getClient();
     if (redisManager.isAvailable() && client) {
       try {
+        // 1. Persist the key-value pair
         await client.set(
           this.formatKey(deviceId),
           JSON.stringify({
@@ -58,6 +63,26 @@ export class RedisDeviceKeyRepository implements IDeviceKeyRepository {
             updatedAt: record.updatedAt.toISOString(),
           })
         );
+
+        // 2. Update LRU sorted set (score = current timestamp ms, as string for ioredis overload)
+        await client.zadd(this.lruSetKey, String(Date.now()), deviceId);
+
+        // 3. Evict oldest entries if over cap
+        const count = await client.zcard(this.lruSetKey);
+        if (count > this.lruCap) {
+          const excess = count - this.lruCap;
+          const oldest = await client.zrange(this.lruSetKey, 0, String(excess - 1));
+          if (oldest.length > 0) {
+            const keysToDelete = oldest.map((id) => this.formatKey(id));
+            await client.del(keysToDelete);
+            await client.zrem(this.lruSetKey, ...oldest);
+            logger.info('Redis LRU: evicted device keys', {
+              evictedCount: oldest.length,
+              evictedDeviceIds: oldest,
+              remainingCap: this.lruCap,
+            });
+          }
+        }
       } catch (err: any) {
         logger.warn('Failed to write device key to Redis; saved to in-memory store', {
           deviceId,
@@ -79,6 +104,8 @@ export class RedisDeviceKeyRepository implements IDeviceKeyRepository {
         const raw = await client.get(this.formatKey(deviceId));
         if (raw) {
           const parsed = JSON.parse(raw);
+          // Refresh LRU score so recently-read devices stay warm (fire-and-forget)
+          client.zadd(this.lruSetKey, String(Date.now()), deviceId).catch(() => {});
           return {
             deviceId: parsed.deviceId,
             apiKey: parsed.apiKey,
