@@ -1,0 +1,44 @@
+# ==============================================================================
+# Caddy Configuration for karivena.admin.polynomial.ai
+# ==============================================================================
+
+karivena.admin.polynomial.ai {
+    encode gzip zstd
+
+    # Forward client IP and host details
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # --------------------------------------------------------------------------
+    # 1. API routes -> Docker backend container on localhost:3000
+    # --------------------------------------------------------------------------
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Swagger API documentation
+    handle /docs* {
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    # Health check endpoint
+    handle /health {
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    # --------------------------------------------------------------------------
+    # 2. Frontend -> PM2 SPA server on localhost:5173
+    # --------------------------------------------------------------------------
+    handle {
+        reverse_proxy 127.0.0.1:5173
+    }
+}
