@@ -277,3 +277,129 @@ docker exec -it akshayakalpa-redis redis-cli keys "device_key:*"
 # Inspect PostgreSQL tables directly
 docker exec -it akshayakalpa-postgres psql -U postgres -d akshayakalpa_db -c "\dt"
 ```
+
+```mermaid
+flowchart TD
+    Start([Launch App]) --> Splash[Splash Screen]
+    Splash --> LangCheck{Language Chosen?}
+    LangCheck -- No --> SelectLang[Select Vernacular Language<br/>Kannada, Tamil, Telugu, Hindi, English]
+    LangCheck -- Yes --> CheckAuth{Auth Token Valid?}
+    SelectLang --> CheckAuth
+
+    CheckAuth -- Yes --> FetchProfile[Fetch Farmer Profile from Frappe]
+    CheckAuth -- No --> EnterPhone[Enter Mobile Number]
+
+    EnterPhone --> RequestOTP[Request OTP via SMS]
+    RequestOTP --> EnterOTP[Enter 4/6-Digit OTP]
+    EnterOTP --> VerifyOTP{OTP Valid?}
+    VerifyOTP -- No --> OTPError[Show Error / Resend OTP]
+    OTPError --> EnterOTP
+    VerifyOTP -- Yes --> FetchProfile
+
+    FetchProfile --> PersonaCheck{Determine Persona}
+    PersonaCheck -- Persona A: Supplying --> DashboardA[Supplying Farmer Home / Overview]
+    PersonaCheck -- Persona B: Pipeline --> DashboardB[Pipeline Onboarding Tracker]
+    PersonaCheck -- Persona C: Community --> DashboardC[Open Community Feed & Knowledge Hub]
+```
+
+```mermaid
+flowchart TD
+    subgraph External[Chilling Centre / BMC & Frappe Backend]
+        Procure[Farmer's Milk gets Delivered at Collection Centre] --> LabTest[BMC Tests Quantity, Fat & SNF]
+        LabTest --> FrappeSync[(Frappe ERP Records Collection & Quality)]
+    end
+
+    subgraph FarmerApp[Farmer App: Overview & Procurement]
+        FrappeSync -.->|Push Notification| RecvNotif[Receive Delivery & Quality Notification]
+        RecvNotif --> OpenOverview[Open Overview Screen]
+        OpenOverview --> ViewSummary[View Today's Supply & Rate Breakdown]
+        
+        ViewSummary --> ActionChoice{Farmer Action}
+        ActionChoice --> ViewQuality[View Milk Quality Trends<br/>Fat, SNF, Alerts & Tips]
+        ActionChoice --> ViewStatement[View Billing & Deduction Statement<br/>Net Payable, Advances, Feeds]
+        ActionChoice --> Dispute[Discrepancy in Qty / Rate / Deductions?]
+
+        Dispute -- Yes --> RaiseTicketCTA[Click CTA: Raise Ticket / Query]
+        RaiseTicketCTA --> TicketForm[Select Line Item, Add Note / Photo]
+        TicketForm --> SubmitQuery[Submit Ticket to Frappe]
+    end
+
+    subgraph AdminConsole[Extension Officer / Admin]
+        SubmitQuery --> OfficerQueue[Extension Officer Reviews & Resolves]
+        OfficerQueue -.-> StatusUpdate[Status Updated in App]
+    end
+```
+
+```mermaid
+flowchart TD
+    subgraph FarmerApp[Farmer App: Herd Management]
+        OpenHerd[Open Herd Management Tab] --> HerdList[View Cattle Registry & Summary]
+        
+        HerdList --> FilterCattle[Filter by Cattle Type, Breed, Life Stage]
+        FilterCattle --> SelectCow[Select Cattle Card]
+
+        SelectCow --> ViewDetails[View Cattle Profile:<br/>- Tag ID & Breed<br/>- Lactation & Life Stage<br/>- Produce Tracker / Yield<br/>- Feeding Tracker<br/>- Ownership Status & History]
+
+        HerdList --> LogNewCattle[CTA: + Log New Cattle]
+        LogNewCattle --> FormCattle[Fill Cattle Info:<br/>- Tag ID / RFID<br/>- Breed & Cattle Type<br/>- Age / DOB & Life Stage<br/>- Ownership Origin / Purchase Date]
+        FormCattle --> SubmitCattle[Submit Cattle Entry]
+    end
+
+    subgraph Backend[Frappe & Field Extension]
+        SubmitCattle --> FrappeHerd[(Frappe Herd Doctype)]
+        FrappeHerd --> EOReview{Tag Verification Needed?}
+        EOReview -- Yes --> EOTask[Assigned Extension Officer Verifies on Field]
+        EOReview -- No --> Approved[Animal Registry Updated]
+        EOTask --> Approved
+        Approved -.-> LiveSync[Live on Farmer App]
+    end
+```
+
+```mermaid
+flowchart TD
+    subgraph HealthTracker[Farmer App: Health & Reminders]
+        ViewHealth[View Health & Vaccination Status] --> CheckSchedules[Reminders: Due Deworming, Vaccines, Dry-off]
+        ViewHealth --> DetectIssue{Animal Sick or Injured?}
+        
+        DetectIssue -- Yes --> IllnessCTA[CTA: Raise Vet Request / Log Illness]
+        IllnessCTA --> IllnessForm[Select Affected Cattle Tag<br/>Select Symptoms & Urgency<br/>Attach Photo / Voice Note]
+        IllnessForm --> SubmitVetReq[Submit Service Request]
+    end
+
+    subgraph Ops[Frappe & Vet Field Dispatch]
+        SubmitVetReq --> FrappeService[(Frappe Service Module)]
+        FrappeService --> VetAssigned[Veterinarian / Para-vet Assigned]
+        VetAssigned -.-> PushStatus[Push Status to Farmer App: Vet En Route]
+        
+        PushStatus --> VetVisit[Vet Conducts Checkup on Farm]
+        VetVisit --> VetLogApp[Vet Logs Treatment & Injections in Field App]
+        VetLogApp --> UpdateMedicalHist[(Update Frappe Medical Records)]
+    end
+
+    subgraph RecordUpdate[Farmer App: Records Updated]
+        UpdateMedicalHist -.-> SyncedProfile[Cattle Profile Updated:<br/>- Illness Tracker Closed<br/>- Next Vaccine/Follow-up Scheduled]
+    end
+```
+
+```mermaid
+flowchart TD
+    StartTicket[Click Help & Support / Raise Ticket] --> SelectCategory{Ticket Category}
+    SelectCategory --> CatMilk[Milk Bill / Quality Dispute]
+    SelectCategory --> CatHerd[Herd Registration Issue]
+    SelectCategory --> CatService[Service / Feed Delivery Delay]
+    SelectCategory --> CatOther[Other General Query]
+
+    CatMilk & CatHerd & CatService & CatOther --> FillDetails[Enter Description & Upload Photo]
+    FillDetails --> SubmitTicket[Submit to Frappe Helpdesk]
+    
+    SubmitTicket --> TicketCreated[Ticket ID Generated & Visible in App]
+    TicketCreated --> EOAssign[Extension Officer / Support Team Assigned]
+
+    EOAssign --> InProgress[Status: In Progress]
+    InProgress --> Resolution[Resolution Provided / Call Made to Farmer]
+    
+    Resolution --> CloseCheck{Farmer Satisfied?}
+    CloseCheck -- Yes --> TicketClosed[Status: Resolved / Closed]
+    CloseCheck -- No --> Reopen[Reopen Ticket with Comments]
+    Reopen --> InProgress
+```

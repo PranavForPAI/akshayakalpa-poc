@@ -80,7 +80,7 @@ model Coordinate {
   batteryPercent     Float?   @map("battery_percent")
   isMock             Boolean  @default(false) @map("is_mock")
   deviceTime         DateTime @map("device_time")
-  /// gps | current | last_known | carried | skipped | failed | awaiting_location
+  /// gps | current | last_known | carried | skipped | failed | awaiting_location | still
   captureSource      String?  @map("capture_source")
   /// foreground | background | terminated
   appState           String?  @map("app_state")

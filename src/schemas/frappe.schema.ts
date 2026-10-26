@@ -170,7 +170,7 @@ export const telemetryReadingSchema = z.object({
   deviceTime: z.string().datetime({ message: 'deviceTime must be an ISO-8601 UTC datetime' }),
   /** Why this reading was captured (or not). */
   captureSource: z
-    .enum(['gps', 'current', 'last_known', 'carried', 'skipped', 'failed', 'awaiting_location'])
+    .enum(['gps', 'current', 'last_known', 'carried', 'skipped', 'failed', 'awaiting_location', 'still'])
     .optional(),
   /** App lifecycle state at capture time. */
   appState: z.enum(['foreground', 'background', 'terminated']).optional(),
