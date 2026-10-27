@@ -70,9 +70,10 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
           container.innerHTML = '';
         }
 
-        const lmap = L.map(container).setView(DEFAULT_CENTER, 12);
+        const lmap = L.map(container, { maxZoom: 22 }).setView(DEFAULT_CENTER, 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
+          maxZoom: 22,
+          maxNativeZoom: 19,
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(lmap);
 
