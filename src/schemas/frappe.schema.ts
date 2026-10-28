@@ -80,6 +80,8 @@ export const startTrackingRequestSchema = z.object({
   odometer_photo: z
     .string()
     .regex(/^data:image\/(jpeg|png);base64,/, 'odometer_photo must be a JPEG or PNG data URI'),
+  /** Optional start odometer reading in kilometers */
+  odometer_reading: z.number().nonnegative().optional(),
   device_details: deviceDetailsSchema.optional(),
 });
 
@@ -123,6 +125,8 @@ export const stopTrackingRequestSchema = z.object({
   odometer_photo: z
     .string()
     .regex(/^data:image\/(jpeg|png);base64,/, 'odometer_photo must be a JPEG or PNG data URI'),
+  /** Optional end odometer reading in kilometers */
+  odometer_reading: z.number().nonnegative().optional(),
 });
 
 export type StopTrackingRequest = z.infer<typeof stopTrackingRequestSchema>;
@@ -161,6 +165,8 @@ export const telemetryReadingSchema = z.object({
   /** Absent (not null) when captureSource is 'skipped' or 'failed'. */
   longitude: z.number().optional(),
   speedKph: z.number().optional(),
+  speedMps: z.number().optional(),
+  speedAccuracyMps: z.number().optional(),
   headingDegrees: z.number().optional(),
   accuracyMeters: z.number().optional(),
   altitudeMeters: z.number().optional(),

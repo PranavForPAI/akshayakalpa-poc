@@ -68,3 +68,63 @@ export interface TripFilters {
   status?: TripStatus;
   search?: string;
 }
+
+export type ViewMode = 'original' | 'improved' | 'compare';
+
+export interface ProcessedPoint {
+  lat: number;
+  lon: number;
+  ts: string;
+  speed_mps: number;
+  sigma_m: number;
+  source: string;
+  flags: string[];
+}
+
+export interface ProcessedStop {
+  anchor_lat: number;
+  anchor_lon: number;
+  arrival_ts: string;
+  departure_ts: string;
+  dwell_s: number;
+  radius_m: number;
+  reason: string;
+  absorbed_point_count: number;
+}
+
+export interface ProcessedSegment {
+  segment_type: 'moving' | 'stop' | 'connector' | 'unmatched';
+  start_ts: string;
+  end_ts: string;
+  coordinates: [number, number][] | [number, number];
+  source: string;
+  confidence: number;
+}
+
+export interface DistanceSummaryData {
+  distance_final_m: number;
+  distance_smoothed_m: number;
+  distance_raw_filtered_m: number;
+  distance_doppler_m: number;
+  distance_odometer_m: number | null;
+  error_odometer_pct: number | null;
+  error_raw_vs_odometer_pct: number | null;
+  n_raw: number;
+  n_rejected: number;
+  n_stop_points: number;
+  n_chunks: number;
+  trigger_reason: string | null;
+  params_hash: string;
+  simplified_polyline: string | null;
+  processed_at: string;
+}
+
+export interface TripProcessedResponse {
+  trip_id: string;
+  pipeline_version: string;
+  summary: DistanceSummaryData;
+  stops: ProcessedStop[];
+  segments: ProcessedSegment[];
+  points: ProcessedPoint[];
+}
+

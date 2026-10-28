@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mapplsSdk, initMappls } from '../lib/mappls';
 import { useDashboardStore } from '../store/useDashboardStore';
-import type { PlottablePoint } from '../types';
+import type { PlottablePoint, TripProcessedResponse, ViewMode } from '../types';
 
 const MAP_ID = 'trip-map';
 const DEFAULT_CENTER: [number, number] = [12.9716, 77.5946];
@@ -12,16 +12,30 @@ const DEFAULT_CENTER: [number, number] = [12.9716, 77.5946];
 const dot = (color: string, size: number) =>
   `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5);cursor:pointer"></div>`;
 
-export function TripMap({ points }: { points: PlottablePoint[] }) {
+const stopBadge = (label: string) =>
+  `<div style="background:#d97706;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer" title="Stop: ${label}">🛑</div>`;
+
+interface TripMapProps {
+  rawPoints: PlottablePoint[];
+  processedData?: TripProcessedResponse | null;
+  viewMode?: ViewMode;
+  onEngineChange?: (engine: 'mappls' | 'leaflet', reason?: string | null) => void;
+}
+
+export function TripMap({
+  rawPoints,
+  processedData,
+  viewMode = 'improved',
+  onEngineChange,
+}: TripMapProps) {
   const [engine, setEngine] = useState<'mappls' | 'leaflet' | null>(null);
-  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   const mapInstanceRef = useRef<any>(null);
   const layersRef = useRef<any[]>([]);
   const leafletLayerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  const { selectPoint, hoverPoint } = useDashboardStore.getState();
+  const { selectPoint, hoverPoint, setFallbackNotice } = useDashboardStore.getState();
 
   // 1. Initialize Map: Tries Mappls Web SDK first; falls back to OpenStreetMap / Leaflet if Mappls fails or times out
   useEffect(() => {
@@ -49,6 +63,8 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
 
         mapInstanceRef.current = map;
         setEngine('mappls');
+        onEngineChange?.('mappls', null);
+        setFallbackNotice(null);
 
         if (typeof map.on === 'function') {
           map.on('load', () => {
@@ -60,7 +76,9 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
       })
       .catch((err: Error) => {
         if (cancelled) return;
-        setFallbackReason(err.message);
+        const reason = err.message || 'Mappls key invalid/expired or connection timed out';
+        setFallbackNotice(reason);
+        onEngineChange?.('leaflet', reason);
 
         const container = document.getElementById(MAP_ID);
         if (!container) return;
@@ -94,11 +112,149 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
     };
   }, []);
 
-  // 2. (Re)draw the route and markers whenever points change or map is ready
+  // 2. (Re)draw the route and markers whenever points, processedData, or viewMode change
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current) return;
 
-    if (engine === 'mappls') {
+    if (engine === 'leaflet') {
+      const lmap = mapInstanceRef.current as L.Map;
+      const group = leafletLayerGroupRef.current;
+      if (!group) return;
+
+      group.clearLayers();
+
+      const bounds = L.latLngBounds([]);
+
+      const showRaw = viewMode === 'original' || viewMode === 'compare';
+      const showImproved = (viewMode === 'improved' || viewMode === 'compare') && !!processedData;
+
+      // -------------------------------------------------------------
+      // Layer A: Original / Raw Track
+      // -------------------------------------------------------------
+      if (showRaw && rawPoints.length > 0) {
+        const rawLatLngs: L.LatLngExpression[] = rawPoints.map((p) => [p.latitude, p.longitude]);
+        rawLatLngs.forEach((ll) => bounds.extend(ll));
+
+        const isCompare = viewMode === 'compare';
+        L.polyline(rawLatLngs, {
+          color: isCompare ? '#f59e0b' : '#2563eb',
+          weight: isCompare ? 3 : 4,
+          opacity: isCompare ? 0.65 : 0.9,
+          dashArray: isCompare ? '5, 8' : undefined,
+        }).addTo(group);
+
+        const last = rawPoints.length - 1;
+        rawPoints.forEach((p, i) => {
+          const isEnd = i === 0 || i === last;
+          // In compare mode, draw smaller markers for raw to keep map readable
+          const size = isEnd ? 16 : isCompare ? 6 : 10;
+          const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : isCompare ? '#f59e0b' : '#2563eb';
+
+          const icon = L.divIcon({
+            className: 'custom-map-marker',
+            html: dot(color, size),
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+          });
+
+          const marker = L.marker([p.latitude, p.longitude], { icon }).addTo(group);
+          marker.on('click', () => selectPoint(p.id));
+          marker.on('mouseover', () => hoverPoint(p.id));
+          marker.on('mouseout', () => hoverPoint(null));
+        });
+      }
+
+      // -------------------------------------------------------------
+      // Layer B: Improved / Smoothed Track + Stops + Connectors
+      // -------------------------------------------------------------
+      if (showImproved && processedData) {
+        const segments = processedData.segments ?? [];
+        const stops = processedData.stops ?? [];
+        const smoothedPts = processedData.points ?? [];
+
+        // 1. Draw segments
+        for (const seg of segments) {
+          if (seg.segment_type === 'moving' && Array.isArray(seg.coordinates[0])) {
+            const coords = seg.coordinates as [number, number][];
+            const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
+            latLngs.forEach((ll) => bounds.extend(ll));
+
+            L.polyline(latLngs, {
+              color: '#059669', // Emerald
+              weight: 5,
+              opacity: 0.95,
+            }).addTo(group);
+          } else if (seg.segment_type === 'connector' && Array.isArray(seg.coordinates[0])) {
+            const coords = seg.coordinates as [number, number][];
+            const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
+            latLngs.forEach((ll) => bounds.extend(ll));
+
+            L.polyline(latLngs, {
+              color: '#6366f1', // Indigo connector
+              weight: 3,
+              opacity: 0.85,
+              dashArray: '6, 6',
+            }).addTo(group);
+          }
+        }
+
+        // 2. Draw stops with radius circles and stop badges
+        stops.forEach((s, idx) => {
+          bounds.extend([s.anchor_lat, s.anchor_lon]);
+
+          // Radius bubble
+          L.circle([s.anchor_lat, s.anchor_lon], {
+            radius: Math.max(10, s.radius_m),
+            color: '#d97706',
+            fillColor: '#f59e0b',
+            fillOpacity: 0.15,
+            weight: 1.5,
+          }).addTo(group);
+
+          const stopIcon = L.divIcon({
+            className: 'custom-map-marker',
+            html: stopBadge(String(idx + 1)),
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          });
+
+          const stopMarker = L.marker([s.anchor_lat, s.anchor_lon], { icon: stopIcon }).addTo(group);
+          stopMarker.bindTooltip(
+            `<strong>Stop #${idx + 1} (${s.reason})</strong><br/>Dwell: ${Math.round(s.dwell_s)}s<br/>${s.absorbed_point_count} absorbed fixes`,
+            { direction: 'top', offset: [0, -10] }
+          );
+        });
+
+        // 3. Draw start & end markers for smoothed trajectory if available
+        if (smoothedPts.length > 0) {
+          const first = smoothedPts[0];
+          const last = smoothedPts[smoothedPts.length - 1];
+
+          const startIcon = L.divIcon({
+            className: 'custom-map-marker',
+            html: dot('#16a34a', 18),
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+          });
+          L.marker([first.lat, first.lon], { icon: startIcon }).addTo(group);
+
+          const endIcon = L.divIcon({
+            className: 'custom-map-marker',
+            html: dot('#dc2626', 18),
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+          });
+          L.marker([last.lat, last.lon], { icon: endIcon }).addTo(group);
+        }
+      }
+
+      // If no points plotted at all, center default
+      if (bounds.isValid()) {
+        lmap.fitBounds(bounds, { padding: [45, 45] });
+      } else {
+        lmap.setView(DEFAULT_CENTER, 12);
+      }
+    } else if (engine === 'mappls') {
       const map = mapInstanceRef.current;
       layersRef.current.forEach((layer) => {
         try {
@@ -109,12 +265,12 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
       });
       layersRef.current = [];
 
-      if (points.length === 0) return;
+      if (rawPoints.length === 0) return;
 
       try {
         const polyline = mapplsSdk.Polyline({
           map,
-          path: points.map((p) => ({ lat: p.latitude, lng: p.longitude })),
+          path: rawPoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
           strokeColor: '#2563eb',
           strokeOpacity: 0.9,
           strokeWeight: 4,
@@ -124,85 +280,12 @@ export function TripMap({ points }: { points: PlottablePoint[] }) {
       } catch (e) {
         console.error('Failed to create Mappls polyline:', e);
       }
-
-      const last = points.length - 1;
-      points.forEach((p, i) => {
-        const isEnd = i === 0 || i === last;
-        const size = isEnd ? 18 : 10;
-        const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : '#2563eb';
-
-        try {
-          const marker = mapplsSdk.Marker({
-            map,
-            position: { lat: p.latitude, lng: p.longitude },
-            html: dot(color, size),
-            width: size,
-            height: size,
-            fitbounds: false,
-          });
-
-          if (marker && typeof marker.addListener === 'function') {
-            marker.addListener('click', () => selectPoint(p.id));
-            marker.addListener('mouseover', () => hoverPoint(p.id));
-            marker.addListener('mouseout', () => hoverPoint(null));
-          }
-          if (marker) layersRef.current.push(marker);
-        } catch (e) {
-          console.error('Failed to create Mappls marker:', e);
-        }
-      });
-    } else if (engine === 'leaflet') {
-      const lmap = mapInstanceRef.current as L.Map;
-      const group = leafletLayerGroupRef.current;
-      if (!group) return;
-
-      group.clearLayers();
-      if (points.length === 0) {
-        lmap.setView(DEFAULT_CENTER, 12);
-        return;
-      }
-
-      const latLngs: L.LatLngExpression[] = points.map((p) => [p.latitude, p.longitude]);
-      const polyline = L.polyline(latLngs, {
-        color: '#2563eb',
-        weight: 4,
-        opacity: 0.9,
-      }).addTo(group);
-
-      const last = points.length - 1;
-      points.forEach((p, i) => {
-        const isEnd = i === 0 || i === last;
-        const size = isEnd ? 18 : 10;
-        const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : '#2563eb';
-
-        const icon = L.divIcon({
-          className: 'custom-map-marker',
-          html: dot(color, size),
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        });
-
-        const marker = L.marker([p.latitude, p.longitude], { icon }).addTo(group);
-        marker.on('click', () => selectPoint(p.id));
-        marker.on('mouseover', () => hoverPoint(p.id));
-        marker.on('mouseout', () => hoverPoint(null));
-      });
-
-      lmap.fitBounds(polyline.getBounds(), { padding: [40, 40] });
     }
-  }, [engine, mapReady, points, selectPoint, hoverPoint]);
+  }, [engine, mapReady, rawPoints, processedData, viewMode, selectPoint, hoverPoint]);
 
   return (
     <div className="map-container">
       <div id={MAP_ID} className="map" />
-      {engine === 'leaflet' && (
-        <div
-          className="map-fallback-badge"
-          title={fallbackReason ?? 'Mappls key invalid/expired — fallback to OpenStreetMap'}
-        >
-          🗺️ OpenStreetMap fallback (Mappls key issue or timed out)
-        </div>
-      )}
     </div>
   );
 }

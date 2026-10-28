@@ -47,14 +47,20 @@ model Trip {
   /// "In Transit" | "Completed"
   status      String       @default("In Transit")
   startedAt   DateTime?    @map("started_at")
-  stoppedAt   DateTime?    @map("stopped_at")
-  driver      String?
-  vehicle     String?
-  route       String?
-  assignment  String?
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  coordinates Coordinate[]
+  stoppedAt       DateTime?            @map("stopped_at")
+  driver          String?
+  vehicle         String?
+  route           String?
+  assignment      String?
+  odometerStartKm Float?               @map("odometer_start_km")
+  odometerEndKm   Float?               @map("odometer_end_km")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  coordinates     Coordinate[]
+  processedPoints TripProcessedPoint[]
+  stops           TripStop[]
+  segments        TripSegment[]
+  distanceSummary TripDistanceSummary?
 
   @@map("trips")
 }
@@ -74,6 +80,8 @@ model Coordinate {
   latitude           Float?
   longitude          Float?
   speedKph           Float?   @map("speed_kph")
+  speedMps           Float?   @map("speed_mps")
+  speedAccuracyMps   Float?   @map("speed_accuracy_mps")
   headingDegrees     Float?   @map("heading_degrees")
   accuracyMeters     Float?   @map("accuracy_meters")
   altitudeMeters     Float?   @map("altitude_meters")
@@ -109,3 +117,140 @@ model Coordinate {
   @@index([deviceTime])
   @@map("coordinates")
 }
+
+// ---------------------------------------------------------------------------
+// Premise Geofence — polygons for known farm/depot/collection centre premises.
+// Bounding box columns allow fast R-tree / spatial bounding prefilter.
+// ---------------------------------------------------------------------------
+model PremiseGeofence {
+  id        Int      @id @default(autoincrement())
+  name      String
+  polygon   Json     // GeoJSON Polygon / MultiPolygon
+  minLat    Float    @map("min_lat")
+  minLon    Float    @map("min_lon")
+  maxLat    Float    @map("max_lat")
+  maxLon    Float    @map("max_lon")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([minLat, maxLat, minLon, maxLon])
+  @@map("premise_geofences")
+}
+
+// ---------------------------------------------------------------------------
+// Trip Processing Jobs — queue table processed with FOR UPDATE SKIP LOCKED
+// ---------------------------------------------------------------------------
+model TripProcessingJob {
+  id              Int       @id @default(autoincrement())
+  tripId          String    @map("trip_id")
+  status          String    @default("pending") // pending | processing | completed | failed | dead_letter
+  pipelineVersion String    @default("v1.0.0") @map("pipeline_version")
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(3) @map("max_attempts")
+  runAt           DateTime  @default(now()) @map("run_at")
+  lockedAt        DateTime? @map("locked_at")
+  lockedBy        String?   @map("locked_by")
+  error           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, runAt])
+  @@index([tripId])
+  @@map("trip_processing_jobs")
+}
+
+// ---------------------------------------------------------------------------
+// Processed Points — outputs from smoothing and stop detection
+// ---------------------------------------------------------------------------
+model TripProcessedPoint {
+  id              Int      @id @default(autoincrement())
+  tripId          String   @map("trip_id")
+  trip            Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  rawPointId      Int?     @map("raw_point_id")
+  lat             Float
+  lon             Float
+  ts              DateTime
+  source          String   // smoothed | stop_anchor | raw_fallback
+  sigmaM          Float    @map("sigma_m")
+  speedMps        Float    @map("speed_mps")
+  flags           String[] @default([]) // rejected | in_stop | gap_edge
+  pipelineVersion String   @map("pipeline_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tripId, pipelineVersion])
+  @@index([tripId, ts])
+  @@map("trip_processed_points")
+}
+
+// ---------------------------------------------------------------------------
+// Stops — identified stationary jitter or premise geofence stops
+// ---------------------------------------------------------------------------
+model TripStop {
+  id              Int      @id @default(autoincrement())
+  tripId          String   @map("trip_id")
+  trip            Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  anchorLat       Float    @map("anchor_lat")
+  anchorLon       Float    @map("anchor_lon")
+  arrivalTs       DateTime @map("arrival_ts")
+  departureTs     DateTime @map("departure_ts")
+  dwellS          Float    @map("dwell_s")
+  nPoints         Int      @map("n_points")
+  radiusM         Float    @map("radius_m")
+  reason          String   // jitter | geofence
+  absorbedRawIds  Int[]    @map("absorbed_raw_ids")
+  pipelineVersion String   @map("pipeline_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tripId, pipelineVersion])
+  @@map("trip_stops")
+}
+
+// ---------------------------------------------------------------------------
+// Segments — moving chunks, stops, and connectors
+// ---------------------------------------------------------------------------
+model TripSegment {
+  id              Int      @id @default(autoincrement())
+  tripId          String   @map("trip_id")
+  trip            Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  segmentType     String   @map("segment_type") // moving | stop | connector
+  startTs         DateTime @map("start_ts")
+  endTs           DateTime @map("end_ts")
+  coordinates     Json     // GeoJSON geometry LineString / Point
+  source          String   // smoothed | stop_anchor | matched
+  confidence      Float
+  dataVersion     String?  @map("data_version")
+  pipelineVersion String   @map("pipeline_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tripId, pipelineVersion])
+  @@map("trip_segments")
+}
+
+// ---------------------------------------------------------------------------
+// Distance Summary — final results, diagnostics, odometer errors
+// ---------------------------------------------------------------------------
+model TripDistanceSummary {
+  id                    Int      @id @default(autoincrement())
+  tripId                String   @unique @map("trip_id")
+  trip                  Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  distanceFinalM        Float    @map("distance_final_m")
+  distanceSmoothedM     Float    @map("distance_smoothed_m")
+  distanceRawFilteredM  Float    @map("distance_raw_filtered_m")
+  distanceDopplerM      Float    @map("distance_doppler_m")
+  distanceOdometerM     Float?   @map("distance_odometer_m")
+  errorOdometerPct      Float?   @map("error_odometer_pct")
+  errorRawVsOdometerPct Float?   @map("error_raw_vs_odometer_pct")
+  nRaw                  Int      @map("n_raw")
+  nRejected             Int      @map("n_rejected")
+  nStopPoints           Int      @map("n_stop_points")
+  nChunks               Int      @map("n_chunks")
+  triggerReason         String?  @map("trigger_reason")
+  paramsHash            String   @map("params_hash")
+  simplifiedPolyline    String?  @map("simplified_polyline")
+  processedAt           DateTime @default(now()) @map("processed_at")
+  pipelineVersion       String   @map("pipeline_version")
+
+  @@index([tripId, pipelineVersion])
+  @@map("trip_distance_summaries")
+}
+

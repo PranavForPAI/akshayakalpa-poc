@@ -235,6 +235,105 @@ export class DashboardController {
       res.status(500).json({ error: 'Failed to export trip' });
     }
   };
+
+  /**
+   * GET /api/dashboard/trips/:tripId/processed
+   * Returns distance summary, stops, segments, and processed points for a trip.
+   */
+  getTripProcessed = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { tripId } = req.params;
+      const pipelineVersion = (req.query.version as string) || undefined;
+
+      const summary = await prisma.tripDistanceSummary.findFirst({
+        where: {
+          tripId,
+          ...(pipelineVersion ? { pipelineVersion } : {}),
+        },
+        orderBy: { processedAt: 'desc' },
+      });
+
+      if (!summary) {
+        res.status(404).json({
+          error: `No processed data found for trip '${tripId}'`,
+          trip_id: tripId,
+        });
+        return;
+      }
+
+      const activeVersion = summary.pipelineVersion;
+
+      const [stops, segments, points] = await Promise.all([
+        prisma.tripStop.findMany({
+          where: { tripId, pipelineVersion: activeVersion },
+          orderBy: { arrivalTs: 'asc' },
+        }),
+        prisma.tripSegment.findMany({
+          where: { tripId, pipelineVersion: activeVersion },
+          orderBy: { startTs: 'asc' },
+        }),
+        prisma.tripProcessedPoint.findMany({
+          where: { tripId, pipelineVersion: activeVersion },
+          orderBy: { ts: 'asc' },
+        }),
+      ]);
+
+      res.status(200).json({
+        trip_id: tripId,
+        pipeline_version: activeVersion,
+        summary: {
+          distance_final_m: summary.distanceFinalM,
+          distance_smoothed_m: summary.distanceSmoothedM,
+          distance_raw_filtered_m: summary.distanceRawFilteredM,
+          distance_doppler_m: summary.distanceDopplerM,
+          distance_odometer_m: summary.distanceOdometerM,
+          error_odometer_pct: summary.errorOdometerPct,
+          error_raw_vs_odometer_pct: summary.errorRawVsOdometerPct,
+          n_raw: summary.nRaw,
+          n_rejected: summary.nRejected,
+          n_stop_points: summary.nStopPoints,
+          n_chunks: summary.nChunks,
+          trigger_reason: summary.triggerReason,
+          params_hash: summary.paramsHash,
+          simplified_polyline: summary.simplifiedPolyline,
+          processed_at: summary.processedAt,
+        },
+        stops: stops.map((s) => ({
+          anchor_lat: s.anchorLat,
+          anchor_lon: s.anchorLon,
+          arrival_ts: s.arrivalTs,
+          departure_ts: s.departureTs,
+          dwell_s: s.dwellS,
+          radius_m: s.radiusM,
+          reason: s.reason,
+          absorbed_point_count: s.absorbedRawIds.length,
+        })),
+        segments: segments.map((seg) => ({
+          segment_type: seg.segmentType,
+          start_ts: seg.startTs,
+          end_ts: seg.endTs,
+          coordinates: seg.coordinates,
+          source: seg.source,
+          confidence: seg.confidence,
+        })),
+        points: points.map((p) => ({
+          lat: p.lat,
+          lon: p.lon,
+          ts: p.ts,
+          speed_mps: p.speedMps,
+          sigma_m: p.sigmaM,
+          source: p.source,
+          flags: p.flags,
+        })),
+      });
+    } catch (err: any) {
+      logger.error('DashboardController.getTripProcessed failed', {
+        tripId: req.params.tripId,
+        error: err?.message ?? String(err),
+      });
+      res.status(500).json({ error: 'Failed to retrieve processed trip data' });
+    }
+  };
 }
 
 export const dashboardController = new DashboardController();

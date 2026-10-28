@@ -84,7 +84,8 @@ class DebugDbRepository {
 
   async upsertFromStartTracking(
     deviceId: string,
-    response: SanitisedStartTrackingResponse
+    response: SanitisedStartTrackingResponse,
+    odometerReading?: number
   ): Promise<void> {
     if (!this.enabled) return;
     try {
@@ -106,6 +107,7 @@ class DebugDbRepository {
         vehicle: response.vehicle,
         route: response.route,
         assignment: response.assignment,
+        odometerStartKm: odometerReading ?? null,
       };
       await prisma.trip.upsert({
         where: { tripId: response.trip_id },
@@ -113,6 +115,7 @@ class DebugDbRepository {
         update: {
           status: response.status,
           startedAt: response.started_at ? new Date(response.started_at) : undefined,
+          ...(odometerReading !== undefined ? { odometerStartKm: odometerReading } : {}),
         },
       });
 
@@ -135,7 +138,8 @@ class DebugDbRepository {
 
   async upsertFromStopTracking(
     deviceId: string,
-    response: SanitisedStopTrackingResponse
+    response: SanitisedStopTrackingResponse,
+    odometerReading?: number
   ): Promise<void> {
     if (!this.enabled) return;
     try {
@@ -158,10 +162,12 @@ class DebugDbRepository {
           vehicle: response.vehicle,
           route: response.route,
           assignment: response.assignment,
+          odometerEndKm: odometerReading ?? null,
         },
         update: {
           status: response.status,
           stoppedAt: response.stopped_at ? new Date(response.stopped_at) : undefined,
+          ...(odometerReading !== undefined ? { odometerEndKm: odometerReading } : {}),
         },
       });
 
@@ -222,6 +228,12 @@ class DebugDbRepository {
         // A reading was forwarded if it had GPS and its position in the forwarded
         // subset is within the upstream call count.
         const wasForwarded = hasGps && forwardedSoFar++ < forwardedCount;
+        const speedMps =
+          r.speedMps !== undefined
+            ? r.speedMps
+            : r.speedKph !== undefined
+            ? r.speedKph / 3.6
+            : null;
         return {
           tripId,
           deviceId: r.deviceId,
@@ -229,6 +241,8 @@ class DebugDbRepository {
           latitude: r.latitude ?? null,
           longitude: r.longitude ?? null,
           speedKph: r.speedKph ?? null,
+          speedMps,
+          speedAccuracyMps: r.speedAccuracyMps ?? null,
           headingDegrees: r.headingDegrees ?? null,
           accuracyMeters: r.accuracyMeters ?? null,
           altitudeMeters: r.altitudeMeters ?? null,

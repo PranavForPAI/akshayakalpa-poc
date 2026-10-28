@@ -1,5 +1,5 @@
 import { apiGet } from './client';
-import type { Paginated, Trip, TripExport, TripFilters, TripPointsResponse } from '../types';
+import type { Paginated, Trip, TripExport, TripFilters, TripPointsResponse, TripProcessedResponse } from '../types';
 
 const BASE = '/api/dashboard/trips';
 
@@ -9,5 +9,9 @@ export const fetchTrips = (filters: TripFilters) =>
 export const fetchTripPoints = (tripId: string) =>
   apiGet<TripPointsResponse>(`${BASE}/${encodeURIComponent(tripId)}/points`);
 
+export const fetchTripProcessed = (tripId: string, version?: string) =>
+  apiGet<TripProcessedResponse>(`${BASE}/${encodeURIComponent(tripId)}/processed`, { version });
+
 export const fetchTripExport = (tripId: string) =>
   apiGet<TripExport>(`${BASE}/${encodeURIComponent(tripId)}/export`);
+

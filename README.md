@@ -401,5 +401,101 @@ flowchart TD
     Resolution --> CloseCheck{Farmer Satisfied?}
     CloseCheck -- Yes --> TicketClosed[Status: Resolved / Closed]
     CloseCheck -- No --> Reopen[Reopen Ticket with Comments]
+    CloseCheck -- No --> Reopen[Reopen Ticket with Comments]
     Reopen --> InProgress
 ```
+
+---
+
+## 🛰️ Trip-Level Path Smoothing & Distance Pipeline
+
+An offline, asynchronous processing pipeline designed to eliminate GPS zigzag noise (which typically introduces 200–300m of phantom distance per trip), cluster premise stops, and compute robust geodesic trip distances.
+
+### 1. Pipeline Execution Order
+
+Processing runs per trip over a typed `TripContext` through 8 discrete stages:
+
+1. **`preprocess`**:
+   - Chronological sort by device timestamp.
+   - Deduplication and out-of-order point drop.
+   - Mock location filter (`isMock`).
+   - Baseline filters: drops fixes with horizontal accuracy > 30m or implied speed > 100 km/h.
+2. **`stopDetection`** *(before Kalman)*:
+   - 60s rolling window stationary jitter detector. Identifies stationary jitter when net displacement is below `max(stopRadiusM, 2 * median_accuracy)` and path tortuosity > 3 (or Doppler speed < 1.0 m/s).
+   - Enters stop when stationary condition holds for >= `stopMinDwellS` (default 90s).
+   - Exits with hysteresis: distance from stop anchor > `exitRadiusM` (40m) for >= 3 consecutive fixes with speed > `exitSpeedMps` (2.0 m/s).
+   - Optional premise geofence matching via R-Tree (`rbush`) bbox prefilter and exact `@turf/boolean-point-in-polygon`.
+   - Absorbed points are excluded from Kalman smoothing and moving distance.
+3. **`kalmanRts`**:
+   - Splits moving points into chunks wherever time gap exceeds `gapSplitS` (default 30s).
+   - Projects each chunk to local metric coordinates (UTM zone computed per chunk centroid: `zone = floor((lon + 180)/6) + 1`, EPSG:326xx).
+   - Discrete white-noise-acceleration Kalman filter with variable $dt$.
+   - Innovation $\chi^2$ gating (Mahalanobis distance squared > 9.21) flags and isolates noise spikes (e.g. 80m jumps) without deleting raw data.
+   - Rauch-Tung-Striebel (RTS) backward smoothing pass produces optimal state estimates and converts back to WGS84 coordinates.
+4. **`segmentAssembly`**:
+   - Constructs ordered segments: moving chunks, stops, and connectors (last moving smoothed point -> stop anchor; stop anchor -> first moving smoothed point).
+5. **`distance`**:
+   - Geodesic length (`distanceSmoothedM`) computed via Haversine across smoothed moving chunks and connectors (stops add zero internal distance).
+   - Diagnostics: `distanceRawFilteredM`, `distanceDopplerM`, `distanceOdometerM`, and absolute percentage error vs. start/end odometer readings.
+   - Generates RDP-simplified polyline strictly for display (never used for distance calculations).
+6. **`matching`**:
+   - `SegmentMatcher` interface with default `NoopMatcher`.
+   - Triggers map-matching only if `mapMatching.enabled=true`, odometer readings are available, and odometer error > `mmTriggerPct` for trips > `mmMinKm`.
+7. **`persist`**:
+   - Atomic PostgreSQL transaction: deletes prior records for `(tripId, pipelineVersion)` and bulk inserts into `trip_processed_points`, `trip_stops`, `trip_segments`, and `trip_distance_summaries`.
+8. **`publish`**:
+   - Forwards summary metrics (`distanceFinalM`, `distanceSmoothedM`, `distanceOdometerM`, `errorOdometerPct`, display polyline, stops, and segment types) to the upstream telemetry service with retries and exponential backoff.
+
+---
+
+### 2. Running Background Workers & Reprocessing CLI
+
+#### Background Worker
+Heavy processing is offloaded from the Express event loop to background workers via a PostgreSQL-backed queue (`FOR UPDATE SKIP LOCKED`):
+
+```bash
+# Run the worker process
+npm run worker
+```
+
+#### Reprocessing via CLI
+Reprocess single trips or historical date ranges:
+
+```bash
+# Reprocess a single trip
+npm run reprocess-trip <tripId>
+npm run reprocess-trip TRIP-2026-00047 -- -v v1.0.0
+
+# Reprocess a date range
+npm run reprocess-range -- --from 2026-03-01 --to 2026-03-15 -v v1.0.0
+```
+
+#### Processed Trip API
+Read processed data and distance diagnostics:
+```http
+GET /api/dashboard/trips/:tripId/processed
+```
+
+---
+
+### 3. Tuning Configuration Thresholds
+
+All thresholds are centralized in `src/tripProcessing/config.ts` and can be customized via `.env`:
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `PIPELINE_VERSION` | `v1.0.0` | Output version key for idempotent schema storage |
+| `GAP_SPLIT_S` | `30` | Time gap in seconds to split moving track into distinct chunks |
+| `STOP_RADIUS_M` | `25` | Base stationary jitter radius threshold (meters) |
+| `STOP_MIN_DWELL_S` | `90` | Minimum dwell time (seconds) to qualify as a Stop |
+| `STOP_SPEED_MPS` | `1.0` | Speed threshold below which points are considered stopped |
+| `TORTUOSITY_MIN` | `3.0` | Minimum path length / net displacement ratio to confirm jitter |
+| `EXIT_RADIUS_M` | `40` | Distance from stop anchor required to begin hysteresis exit |
+| `EXIT_SPEED_MPS` | `2.0` | Minimum speed required for exit fixes |
+| `KF_Q` | `1.5` | Kalman acceleration process noise $\sigma_a$ ($m/s^2$) |
+| `MIN_SIGMA_M` | `3.0` | Minimum GPS measurement standard deviation (meters) |
+| `CHI2_GATE` | `9.21` | Innovation gating threshold ($\chi^2$, 2 DOF, 99% confidence) |
+| `MAX_CONSECUTIVE_REJECTS` | `5` | Rejection limit before Kalman state reinitializes |
+| `MAP_MATCHING_ENABLED` | `false`| Enable / disable map matching stage |
+| `MM_TRIGGER_PCT` | `3` | Odometer discrepancy percentage threshold to trigger matching |
+| `MM_MIN_KM` | `3` | Minimum trip length in km to allow map matching trigger |

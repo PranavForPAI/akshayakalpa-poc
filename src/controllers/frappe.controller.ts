@@ -17,6 +17,7 @@ import {
 } from '../schemas/frappe.schema.js';
 import logger from '../logger.js';
 import { debugDbRepo } from '../repositories/debug-db.repository.js';
+import { jobQueue } from '../tripProcessing/queue/jobQueue.js';
 
 // ---------------------------------------------------------------------------
 // Helper: type predicate — narrows a reading to one that has valid GPS coords
@@ -99,7 +100,7 @@ export class FrappeController {
       // Fire-and-forget: persist device key + trip to Postgres (DEBUG_MODE only)
       setImmediate(() => {
         debugDbRepo
-          .upsertFromStartTracking(result.device_id, result)
+          .upsertFromStartTracking(result.device_id, result, req.body.odometer_reading)
           .catch((err) =>
             logger.error('DebugDb fire-and-forget failed (start-tracking)', {
               error: err?.message,
@@ -123,12 +124,16 @@ export class FrappeController {
       const result = await this.frappeService.stopTracking(req.body, req.hostname);
       res.status(200).json({ message: result });
 
-      // Fire-and-forget: update trip status in Postgres (DEBUG_MODE only)
+      // Fire-and-forget: update trip status in Postgres and enqueue offline processing
+      // Never blocks the Express event loop; worker handles heavy smoothing asynchronously.
       setImmediate(() => {
         debugDbRepo
-          .upsertFromStopTracking(result.device_id, result)
+          .upsertFromStopTracking(result.device_id, result, req.body.odometer_reading)
+          .then(() => {
+            return jobQueue.enqueueJob(result.trip_id);
+          })
           .catch((err) =>
-            logger.error('DebugDb fire-and-forget failed (stop-tracking)', {
+            logger.error('DebugDb / JobQueue fire-and-forget failed (stop-tracking)', {
               error: err?.message,
             })
           );

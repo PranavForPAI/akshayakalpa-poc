@@ -21,4 +21,10 @@ dashboardRouter.get('/trips/:tripId/points', dashboardController.getTripPoints);
  */
 dashboardRouter.get('/trips/:tripId/export', dashboardController.getTripExport);
 
+/**
+ * GET /api/dashboard/trips/:tripId/processed
+ * Returns smoothed points, stops, segments, and distance summary.
+ */
+dashboardRouter.get('/trips/:tripId/processed', dashboardController.getTripProcessed);
+
 export default dashboardRouter;
