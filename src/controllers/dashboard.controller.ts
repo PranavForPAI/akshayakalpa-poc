@@ -263,7 +263,7 @@ export class DashboardController {
 
       const activeVersion = summary.pipelineVersion;
 
-      const [stops, segments, points] = await Promise.all([
+      const [stops, segments, points, matching] = await Promise.all([
         prisma.tripStop.findMany({
           where: { tripId, pipelineVersion: activeVersion },
           orderBy: { arrivalTs: 'asc' },
@@ -275,6 +275,10 @@ export class DashboardController {
         prisma.tripProcessedPoint.findMany({
           where: { tripId, pipelineVersion: activeVersion },
           orderBy: { ts: 'asc' },
+        }),
+        prisma.tripMatchingSummary.findFirst({
+          where: { tripId, pipelineVersion: activeVersion },
+          orderBy: { createdAt: 'desc' },
         }),
       ]);
 
@@ -315,7 +319,23 @@ export class DashboardController {
           coordinates: seg.coordinates,
           source: seg.source,
           confidence: seg.confidence,
+          region_id: seg.regionId,
+          data_version: seg.dataVersion,
+          reject_reason: seg.rejectReason,
         })),
+        matching: matching
+          ? {
+              backend: matching.backend,
+              n_runs: matching.nRuns,
+              n_matched: matching.nMatched,
+              n_unmatched: matching.nUnmatched,
+              matched_share: matching.matchedShare,
+              regions_used: matching.regionsUsed,
+              reject_reasons: matching.rejectReasons,
+              http_ms: matching.httpMs,
+              matched_at: matching.createdAt,
+            }
+          : null,
         points: points.map((p) => ({
           lat: p.lat,
           lon: p.lon,

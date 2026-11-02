@@ -11,7 +11,16 @@ const CHUNK_SIZE = 1000;
  * Deletes any existing rows for (tripId, pipelineVersion) before inserting new ones.
  */
 export async function persistStage(ctx: TripContext): Promise<TripContext> {
-  const { tripId, config, smoothedPoints = [], stops = [], segments = [], distances } = ctx;
+  const {
+    tripId,
+    config,
+    smoothedPoints = [],
+    stops = [],
+    segments = [],
+    distances,
+    matchedSegments = [],
+    matchingSummary,
+  } = ctx;
   const pipelineVersion = config.pipelineVersion;
 
   if (!distances) {
@@ -33,6 +42,9 @@ export async function persistStage(ctx: TripContext): Promise<TripContext> {
           where: { tripId, pipelineVersion },
         }),
         tx.tripDistanceSummary.deleteMany({
+          where: { tripId, pipelineVersion },
+        }),
+        tx.tripMatchingSummary.deleteMany({
           where: { tripId, pipelineVersion },
         }),
       ]);
@@ -88,6 +100,43 @@ export async function persistStage(ctx: TripContext): Promise<TripContext> {
           pipelineVersion,
         }));
         await tx.tripSegment.createMany({ data: segmentRows });
+      }
+
+      // 4b. Matcher output: stored as separate rows with provenance; smoothed rows are untouched.
+      if (matchedSegments.length > 0) {
+        const matchedRows = matchedSegments.map((m) => ({
+          tripId,
+          segmentType: m.segmentType,
+          startTs: m.startTs ?? m.endTs ?? new Date(0),
+          endTs: m.endTs ?? m.startTs ?? new Date(0),
+          coordinates: m.coordinates,
+          source: m.segmentType === 'matched' ? 'matched' : 'smoothed',
+          confidence: m.confidence,
+          dataVersion: m.dataVersion ?? null,
+          regionId: m.regionId ?? null,
+          rejectReason: m.rejectReason ?? null,
+          pipelineVersion,
+        }));
+        for (let i = 0; i < matchedRows.length; i += CHUNK_SIZE) {
+          await tx.tripSegment.createMany({ data: matchedRows.slice(i, i + CHUNK_SIZE) });
+        }
+      }
+
+      if (matchingSummary) {
+        await tx.tripMatchingSummary.create({
+          data: {
+            tripId,
+            backend: matchingSummary.backend,
+            nRuns: matchingSummary.nRuns,
+            nMatched: matchingSummary.nMatched,
+            nUnmatched: matchingSummary.nUnmatched,
+            matchedShare: matchingSummary.matchedShare,
+            regionsUsed: matchingSummary.regionsUsed,
+            rejectReasons: matchingSummary.rejectReasons,
+            httpMs: matchingSummary.httpMs,
+            pipelineVersion,
+          },
+        });
       }
 
       // 5. Insert distance summary

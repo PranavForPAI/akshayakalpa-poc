@@ -4,7 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mapplsSdk, initMappls } from '../lib/mappls';
 import { useDashboardStore } from '../store/useDashboardStore';
-import type { PlottablePoint, TripProcessedResponse, ViewMode } from '../types';
+import type { PlottablePoint, ProcessedSegment, TripProcessedResponse, ViewMode } from '../types';
+import { rejectReasonLabel } from '../lib/matching';
 
 const MAP_ID = 'trip-map';
 const DEFAULT_CENTER: [number, number] = [12.9716, 77.5946];
@@ -15,10 +16,25 @@ const dot = (color: string, size: number) =>
 const stopBadge = (label: string) =>
   `<div style="background:#d97706;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer" title="Stop: ${label}">🛑</div>`;
 
+const escapeHtml = (v: unknown) =>
+  String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+const timeRange = (seg: ProcessedSegment) => {
+  const f = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return `${f(seg.start_ts)} – ${f(seg.end_ts)}`;
+};
+
+/** Map colours for the matched view (kept distinct from raw blue and smoothed emerald). */
+export const MATCHED_COLOR = '#7c3aed';
+export const UNMATCHED_COLOR = '#059669';
+const MATCHED_CONNECTOR_COLOR = '#64748b';
+
 interface TripMapProps {
   rawPoints: PlottablePoint[];
   processedData?: TripProcessedResponse | null;
   viewMode?: ViewMode;
+  /** Draw each raw GPS fix as a dot (default: path line with start/end markers only) */
+  showRawPoints?: boolean;
   onEngineChange?: (engine: 'mappls' | 'leaflet', reason?: string | null) => void;
 }
 
@@ -26,6 +42,7 @@ export function TripMap({
   rawPoints,
   processedData,
   viewMode = 'improved',
+  showRawPoints = false,
   onEngineChange,
 }: TripMapProps) {
   const [engine, setEngine] = useState<'mappls' | 'leaflet' | null>(null);
@@ -127,6 +144,7 @@ export function TripMap({
 
       const showRaw = viewMode === 'original' || viewMode === 'compare';
       const showImproved = (viewMode === 'improved' || viewMode === 'compare') && !!processedData;
+      const showMatched = viewMode === 'matched' && !!processedData;
 
       // -------------------------------------------------------------
       // Layer A: Original / Raw Track
@@ -146,6 +164,8 @@ export function TripMap({
         const last = rawPoints.length - 1;
         rawPoints.forEach((p, i) => {
           const isEnd = i === 0 || i === last;
+          // Intermediate fixes are drawn only when "Show points" is on; start/end always are
+          if (!isEnd && !showRawPoints) return;
           // In compare mode, draw smaller markers for raw to keep map readable
           const size = isEnd ? 16 : isCompare ? 6 : 10;
           const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : isCompare ? '#f59e0b' : '#2563eb';
@@ -165,15 +185,49 @@ export function TripMap({
       }
 
       // -------------------------------------------------------------
-      // Layer B: Improved / Smoothed Track + Stops + Connectors
+      // Layer B: Improved (smoothed) or Matched (road-snapped) Track + Stops + Connectors
       // -------------------------------------------------------------
-      if (showImproved && processedData) {
+      if ((showImproved || showMatched) && processedData) {
         const segments = processedData.segments ?? [];
         const stops = processedData.stops ?? [];
         const smoothedPts = processedData.points ?? [];
 
-        // 1. Draw segments
-        for (const seg of segments) {
+        // 1a. Matched view: matcher rows replace the smoothed moving rows (they cover the same path)
+        if (showMatched) {
+          for (const seg of segments) {
+            if (!Array.isArray(seg.coordinates[0])) continue;
+            const coords = seg.coordinates as [number, number][];
+            const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
+
+            if (seg.segment_type === 'matched') {
+              latLngs.forEach((ll) => bounds.extend(ll));
+              L.polyline(latLngs, { color: MATCHED_COLOR, weight: 5, opacity: 0.95 })
+                .bindTooltip(
+                  `<strong>Road-matched</strong><br/>Region: ${escapeHtml(seg.region_id ?? '-')}` +
+                    `<br/>Confidence: ${(seg.confidence * 100).toFixed(0)}%` +
+                    `<br/>Map data: ${escapeHtml(seg.data_version ?? '-')}<br/>${timeRange(seg)}`,
+                  { sticky: true }
+                )
+                .addTo(group);
+            } else if (seg.segment_type === 'unmatched') {
+              latLngs.forEach((ll) => bounds.extend(ll));
+              L.polyline(latLngs, { color: UNMATCHED_COLOR, weight: 4, opacity: 0.85, dashArray: '8, 6' })
+                .bindTooltip(
+                  `<strong>Not matched – smoothed path kept</strong><br/>${escapeHtml(rejectReasonLabel(seg.reject_reason))}` +
+                    (seg.region_id ? `<br/>Region: ${escapeHtml(seg.region_id)}` : '') +
+                    `<br/>${timeRange(seg)}`,
+                  { sticky: true }
+                )
+                .addTo(group);
+            } else if (seg.segment_type === 'connector') {
+              latLngs.forEach((ll) => bounds.extend(ll));
+              L.polyline(latLngs, { color: MATCHED_CONNECTOR_COLOR, weight: 2.5, opacity: 0.8, dashArray: '4, 6' }).addTo(group);
+            }
+          }
+        }
+
+        // 1b. Improved view: smoothed moving segments + connectors
+        for (const seg of showImproved ? segments : []) {
           if (seg.segment_type === 'moving' && Array.isArray(seg.coordinates[0])) {
             const coords = seg.coordinates as [number, number][];
             const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
@@ -281,7 +335,7 @@ export function TripMap({
         console.error('Failed to create Mappls polyline:', e);
       }
     }
-  }, [engine, mapReady, rawPoints, processedData, viewMode, selectPoint, hoverPoint]);
+  }, [engine, mapReady, rawPoints, processedData, viewMode, showRawPoints, selectPoint, hoverPoint]);
 
   return (
     <div className="map-container">

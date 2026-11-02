@@ -1,0 +1,34 @@
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Surat city",
+    "note": "Surat city incl. Hazira. Extract with the wider bbox 72.60,21.00,73.00,21.30."
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          72.62,
+          21.02
+        ],
+        [
+          72.98,
+          21.02
+        ],
+        [
+          72.98,
+          21.28
+        ],
+        [
+          72.62,
+          21.28
+        ],
+        [
+          72.62,
+          21.02
+        ]
+      ]
+    ]
+  }
+}

@@ -73,6 +73,7 @@ export function segmentAssemblyStage(ctx: TripContext): TripContext {
         coordinates: coords,
         source: 'smoothed',
         confidence: 0.95,
+        chunkIndex: item.chunkIdx,
       });
 
       // If followed immediately by a stop, add connector: last moving point -> stop anchor

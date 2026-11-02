@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { haversineDistanceM, simplifyCoordinates, encodePolyline } from '../geo/geodesic.js';
-import type { TripContext, DistanceSummary } from '../types.js';
+import type { TripContext, DistanceSummary, Segment, MatchedSegment } from '../types.js';
+import { effectiveConfigForHash } from '../config.js';
 
 /**
  * Computes geodesic distance of a segment in meters.
@@ -8,7 +9,7 @@ import type { TripContext, DistanceSummary } from '../types.js';
  * Connector segments: distance between start and end coordinate.
  * Stops: 0 meters.
  */
-function computeSegmentDistanceM(coords: [number, number][] | [number, number], type: string): number {
+export function computeSegmentDistanceM(coords: [number, number][] | [number, number], type: string): number {
   if (type === 'stop') {
     return 0;
   }
@@ -33,6 +34,52 @@ function computeSegmentDistanceM(coords: [number, number][] | [number, number], 
   }
 
   return 0;
+}
+
+/**
+ * Final trip distance given (optional) matcher output.
+ * - Segments without matcher pieces (connectors, stops, unhandled moving chunks) keep their
+ *   smoothed length via computeSegmentDistanceM.
+ * - A moving segment with pieces contributes the sum of its pieces (matched: matchedLengthM;
+ *   unmatched: smoothed geometry length) plus the straight join between consecutive pieces
+ *   (0 when the stitcher connected them).
+ */
+export function computeFinalDistanceM(
+  segments: Segment[],
+  matchedSegments: MatchedSegment[] = []
+): number {
+  const piecesByChunk = new Map<number, MatchedSegment[]>();
+  for (const m of matchedSegments) {
+    if (m.chunkIndex === undefined) continue;
+    let list = piecesByChunk.get(m.chunkIndex);
+    if (!list) piecesByChunk.set(m.chunkIndex, (list = []));
+    list.push(m);
+  }
+
+  let total = 0;
+  for (const seg of segments) {
+    const pieces =
+      seg.segmentType === 'moving' && seg.chunkIndex !== undefined
+        ? piecesByChunk.get(seg.chunkIndex)
+        : undefined;
+    if (!pieces || pieces.length === 0) {
+      total += computeSegmentDistanceM(seg.coordinates, seg.segmentType);
+      continue;
+    }
+    let prevLast: [number, number] | null = null;
+    for (const p of pieces) {
+      total +=
+        p.segmentType === 'matched' && p.matchedLengthM != null
+          ? p.matchedLengthM
+          : computeSegmentDistanceM(p.coordinates, 'moving');
+      if (prevLast && p.coordinates.length > 0) {
+        const first = p.coordinates[0];
+        total += haversineDistanceM(prevLast[1], prevLast[0], first[1], first[0]);
+      }
+      if (p.coordinates.length > 0) prevLast = p.coordinates[p.coordinates.length - 1];
+    }
+  }
+  return total;
 }
 
 /**
@@ -136,7 +183,7 @@ export function distanceStage(ctx: TripContext): TripContext {
   const nStopPoints = ctx.absorbedPointIds ? ctx.absorbedPointIds.size : 0;
   const nChunks = ctx.chunks ? ctx.chunks.length : 0;
 
-  const configJson = JSON.stringify(config);
+  const configJson = JSON.stringify(effectiveConfigForHash(config));
   const paramsHash = crypto.createHash('md5').update(configJson).digest('hex');
 
   const summary: DistanceSummary = {

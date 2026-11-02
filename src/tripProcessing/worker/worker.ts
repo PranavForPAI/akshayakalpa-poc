@@ -1,9 +1,8 @@
 import 'dotenv/config';
-import prisma from '../../db/prisma.js';
 import logger from '../../logger.js';
 import { jobQueue, type JobRecord } from '../queue/jobQueue.js';
 import { TripProcessor } from '../TripProcessor.js';
-import type { RawPoint, PremiseGeofenceData } from '../types.js';
+import { loadTripInput } from '../loadTrip.js';
 
 export class TripProcessingWorker {
   private isRunning = false;
@@ -24,64 +23,13 @@ export class TripProcessingWorker {
     try {
       logger.info(`Worker ${this.workerId} processing job #${jobId} for trip ${tripId}`);
 
-      // 1. Fetch raw coordinates from Postgres
-      const coordinates = await prisma.coordinate.findMany({
-        where: {
-          tripId,
-          hasGps: true,
-          latitude: { not: null },
-          longitude: { not: null },
-        },
-        orderBy: [{ deviceTime: 'asc' }, { id: 'asc' }],
-      });
+      // 1. Load coordinates, odometer readings and premise geofences
+      const { rawPoints, metadata } = await loadTripInput(tripId);
 
-      // 2. Fetch trip metadata
-      const trip = await prisma.trip.findUnique({
-        where: { tripId },
-        select: {
-          odometerStartKm: true,
-          odometerEndKm: true,
-        },
-      });
+      // 2. Run TripProcessor pipeline
+      await this.processor.processTrip(tripId, rawPoints, metadata);
 
-      // 3. Fetch premise geofences
-      const geofenceRows = await prisma.premiseGeofence.findMany();
-      const premiseGeofences: PremiseGeofenceData[] = geofenceRows.map((g) => ({
-        id: g.id,
-        name: g.name,
-        polygon: g.polygon,
-        minLat: g.minLat,
-        minLon: g.minLon,
-        maxLat: g.maxLat,
-        maxLon: g.maxLon,
-      }));
-
-      // 4. Map DB coordinates to RawPoint domain model
-      const rawPoints: RawPoint[] = coordinates.map((c) => ({
-        id: c.id,
-        latitude: c.latitude!,
-        longitude: c.longitude!,
-        deviceTime: c.deviceTime,
-        accuracyMeters: c.accuracyMeters,
-        speedMps:
-          c.speedMps !== null
-            ? c.speedMps
-            : c.speedKph !== null
-            ? c.speedKph / 3.6
-            : null,
-        speedAccuracyMps: c.speedAccuracyMps,
-        headingDegrees: c.headingDegrees,
-        isMock: c.isMock,
-      }));
-
-      // 5. Run TripProcessor pipeline
-      await this.processor.processTrip(tripId, rawPoints, {
-        odometerStartKm: trip?.odometerStartKm,
-        odometerEndKm: trip?.odometerEndKm,
-        premiseGeofences,
-      });
-
-      // 6. Complete job
+      // 3. Complete job
       await jobQueue.completeJob(jobId);
       logger.info(`Worker ${this.workerId} finished job #${jobId} for trip ${tripId}`);
     } catch (err: any) {

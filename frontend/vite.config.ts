@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    allowedHosts: ['tracking-poc-fe.pranavpatel.work'],
     proxy: { '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000' },
   },
 });

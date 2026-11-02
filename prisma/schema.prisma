@@ -61,6 +61,7 @@ model Trip {
   stops           TripStop[]
   segments        TripSegment[]
   distanceSummary TripDistanceSummary?
+  matchingSummary TripMatchingSummary[]
 
   @@map("trips")
 }
@@ -212,13 +213,18 @@ model TripSegment {
   id              Int      @id @default(autoincrement())
   tripId          String   @map("trip_id")
   trip            Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
-  segmentType     String   @map("segment_type") // moving | stop | connector
+  segmentType     String   @map("segment_type") // moving | stop | connector | matched | unmatched
   startTs         DateTime @map("start_ts")
   endTs           DateTime @map("end_ts")
   coordinates     Json     // GeoJSON geometry LineString / Point
   source          String   // smoothed | stop_anchor | matched
   confidence      Float
+  /// OSRM dataset version that produced matched geometry (provenance)
   dataVersion     String?  @map("data_version")
+  /// OSRM region used for matched / attempted rows
+  regionId        String?  @map("region_id")
+  /// Why a matcher row kept the smoothed path (e.g. low_confidence, region_unavailable)
+  rejectReason    String?  @map("reject_reason")
   pipelineVersion String   @map("pipeline_version")
   createdAt       DateTime @default(now()) @map("created_at")
 
@@ -254,3 +260,52 @@ model TripDistanceSummary {
   @@map("trip_distance_summaries")
 }
 
+
+// ---------------------------------------------------------------------------
+// OSRM Region registry — one OSRM instance per hotspot / backbone extract.
+// Polygon stored as GeoJSON (no PostGIS); bbox columns feed the in-memory rbush index.
+// ---------------------------------------------------------------------------
+model OsrmRegion {
+  regionId    String   @id @map("region_id")
+  name        String
+  polygon     Json     // GeoJSON Polygon / MultiPolygon
+  minLon      Float    @map("min_lon")
+  minLat      Float    @map("min_lat")
+  maxLon      Float    @map("max_lon")
+  maxLat      Float    @map("max_lat")
+  osrmUrl     String   @map("osrm_url")
+  /// OSRM profile in the URL: car | bike | custom name
+  profile     String
+  /// hotspot | backbone
+  kind        String
+  dataVersion String   @map("data_version")
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([enabled, kind])
+  @@map("osrm_region")
+}
+
+// ---------------------------------------------------------------------------
+// Per-trip map matching summary (only written when a matcher ran)
+// ---------------------------------------------------------------------------
+model TripMatchingSummary {
+  id              Int      @id @default(autoincrement())
+  tripId          String   @map("trip_id")
+  trip            Trip     @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  backend         String
+  nRuns           Int      @map("n_runs")
+  nMatched        Int      @map("n_matched")
+  nUnmatched      Int      @map("n_unmatched")
+  /// Share of moving length covered by accepted matched geometry (0..1)
+  matchedShare    Float    @map("matched_share")
+  regionsUsed     String[] @map("regions_used")
+  rejectReasons   Json     @map("reject_reasons")
+  httpMs          Int      @map("http_ms")
+  pipelineVersion String   @map("pipeline_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tripId, pipelineVersion])
+  @@map("trip_matching_summaries")
+}

@@ -1,5 +1,74 @@
 import { z } from 'zod';
 
+/** Options for the regional OSRM matcher (mapMatching.backend = 'osrm_regional'). */
+export const osrmRegionalConfigSchema = z.object({
+  /** TTL of the in-memory region list / rbush index (seconds) */
+  regionCacheTtlS: z.number().positive().default(60),
+  /** If the best region covers at least this fraction of a chunk, the whole chunk goes there */
+  regionMinCoverage: z.number().min(0).max(1).default(0.95),
+  /** Runs shorter than this (points) are merged into a neighbouring run when that run's region covers them */
+  minRunPoints: z.number().int().positive().default(10),
+  /** Points of overlap added on each side of a run / request window */
+  overlapPoints: z.number().int().min(0).default(5),
+  /** A join gap between consecutive pieces above this breaks the segment instead of connecting (m) */
+  stitchMaxGapM: z.number().positive().default(50),
+  /** Join gaps at or below this are treated as the same vertex (m) */
+  stitchJoinToleranceM: z.number().min(0).default(1),
+  /** Per-point OSRM radius = smoothed sigmaM clamped to [radiusMinM, radiusMaxM] */
+  radiusMinM: z.number().positive().default(10),
+  radiusMaxM: z.number().positive().default(40),
+  /** Target spacing of points sent to OSRM (seconds) */
+  downsampleIntervalS: z.number().positive().default(5),
+  /** Heading change (deg) vs last kept point above which a point is always kept */
+  turnAngleDeg: z.number().positive().default(30),
+  /** Max coordinates per /match request; must be <= osrm-routed --max-matching-size */
+  maxPointsPerRequest: z.number().int().min(2).default(90),
+  /** Switch coordinates to polyline6 encoding when the GET URL would exceed this length */
+  maxUrlLength: z.number().int().positive().default(4000),
+  /** Per-attempt HTTP timeout for /match (ms) */
+  requestTimeoutMs: z.number().int().positive().default(10000),
+  /** Retries for transient failures (timeouts, 5xx, network) */
+  retries: z.number().int().min(0).default(1),
+  retryBaseDelayMs: z.number().int().min(0).default(200),
+  /** Parallel /match requests per trip */
+  concurrency: z.number().int().positive().default(4),
+  /** Acceptance: minimum sub-matching confidence */
+  mmMinConfidence: z.number().min(0).max(1).default(0.6),
+  /** Acceptance: matchedLength / smoothedLength must lie in [mmMinRatio, mmMaxRatio] */
+  mmMinRatio: z.number().positive().default(0.85),
+  mmMaxRatio: z.number().positive().default(1.15),
+  /** Ratio check is skipped for windows whose smoothed core is shorter than this (m) */
+  ratioMinBaseM: z.number().min(0).default(25),
+  /** Acceptance: no sent point may snap further than this from its smoothed position (m) */
+  maxSnapDistanceM: z.number().positive().default(60),
+  /** Acceptance: max fraction of sent core points OSRM may drop as outliers */
+  maxDroppedPointFrac: z.number().min(0).max(1).default(0.3),
+  /** Health: how long a successful ping is trusted (s) */
+  healthTtlS: z.number().positive().default(30),
+  /** Health: how long a failing region is skipped (s) */
+  healthCooldownS: z.number().positive().default(120),
+  /** Health: ping timeout (ms) */
+  healthTimeoutMs: z.number().int().positive().default(2000),
+});
+
+export type OsrmRegionalConfig = z.infer<typeof osrmRegionalConfigSchema>;
+
+/** Resolves regional OSRM options with defaults (configs may be hand-built and omit them). */
+export function resolveOsrmRegionalConfig(config: {
+  mapMatching?: { osrm?: Partial<OsrmRegionalConfig> };
+}): OsrmRegionalConfig {
+  return osrmRegionalConfigSchema.parse(config.mapMatching?.osrm ?? {});
+}
+
+/**
+ * Config view used for params hashing. When matching is disabled, matcher options cannot
+ * affect outputs, so they are excluded: the hash stays identical to pre-matcher versions.
+ */
+export function effectiveConfigForHash(config: PipelineConfig): unknown {
+  if (config.mapMatching?.enabled) return config;
+  return { ...config, mapMatching: { enabled: false } };
+}
+
 export const pipelineConfigSchema = z.object({
   pipelineVersion: z.string().default('v1.0.0'),
   /** Time gap in seconds beyond which moving track is split into separate chunks */
@@ -28,6 +97,10 @@ export const pipelineConfigSchema = z.object({
   mapMatching: z
     .object({
       enabled: z.boolean().default(false),
+      /** Matcher backend: 'noop' (default) or 'osrm_regional' (OSRM sharded by region) */
+      backend: z.enum(['noop', 'osrm_regional']).default('noop'),
+      /** Options for the regional OSRM matcher (ignored by other backends) */
+      osrm: osrmRegionalConfigSchema.default({}),
     })
     .default({ enabled: false }),
   /** Percentage error threshold vs odometer to trigger map matching */
@@ -58,8 +131,11 @@ export function loadPipelineConfig(overrides?: Partial<PipelineConfig>): Pipelin
   if (process.env.CHI2_GATE) envConfig.chi2Gate = Number(process.env.CHI2_GATE);
   if (process.env.MAX_CONSECUTIVE_REJECTS)
     envConfig.maxConsecutiveRejects = Number(process.env.MAX_CONSECUTIVE_REJECTS);
-  if (process.env.MAP_MATCHING_ENABLED) {
-    envConfig.mapMatching = { enabled: process.env.MAP_MATCHING_ENABLED === 'true' };
+  if (process.env.MAP_MATCHING_ENABLED || process.env.MAP_MATCHING_BACKEND) {
+    envConfig.mapMatching = {
+      enabled: process.env.MAP_MATCHING_ENABLED === 'true',
+      ...(process.env.MAP_MATCHING_BACKEND ? { backend: process.env.MAP_MATCHING_BACKEND } : {}),
+    };
   }
   if (process.env.MM_TRIGGER_PCT) envConfig.mmTriggerPct = Number(process.env.MM_TRIGGER_PCT);
   if (process.env.MM_MIN_KM) envConfig.mmMinKm = Number(process.env.MM_MIN_KM);

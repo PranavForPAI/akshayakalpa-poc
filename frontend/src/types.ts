@@ -69,7 +69,7 @@ export interface TripFilters {
   search?: string;
 }
 
-export type ViewMode = 'original' | 'improved' | 'compare';
+export type ViewMode = 'original' | 'improved' | 'matched' | 'compare';
 
 export interface ProcessedPoint {
   lat: number;
@@ -93,12 +93,32 @@ export interface ProcessedStop {
 }
 
 export interface ProcessedSegment {
-  segment_type: 'moving' | 'stop' | 'connector' | 'unmatched';
+  /** moving/stop/connector = smoothed path; matched/unmatched = map-matcher output (separate rows) */
+  segment_type: 'moving' | 'stop' | 'connector' | 'matched' | 'unmatched';
   start_ts: string;
   end_ts: string;
   coordinates: [number, number][] | [number, number];
   source: string;
   confidence: number;
+  /** OSRM region that produced (or was tried for) a matcher row */
+  region_id?: string | null;
+  /** OSM dataset version behind matched geometry */
+  data_version?: string | null;
+  /** Why an 'unmatched' row kept the smoothed path (e.g. low_confidence, no_region) */
+  reject_reason?: string | null;
+}
+
+export interface MatchingSummaryData {
+  backend: string;
+  n_runs: number;
+  n_matched: number;
+  n_unmatched: number;
+  /** Share of moving length covered by accepted road-matched geometry (0..1) */
+  matched_share: number;
+  regions_used: string[];
+  reject_reasons: Record<string, number>;
+  http_ms: number;
+  matched_at: string;
 }
 
 export interface DistanceSummaryData {
@@ -125,6 +145,8 @@ export interface TripProcessedResponse {
   summary: DistanceSummaryData;
   stops: ProcessedStop[];
   segments: ProcessedSegment[];
+  /** Present only when the map matcher ran for this trip */
+  matching?: MatchingSummaryData | null;
   points: ProcessedPoint[];
 }
 

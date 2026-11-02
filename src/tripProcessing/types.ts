@@ -62,7 +62,7 @@ export interface SmoothedPoint {
   chunkIndex?: number;
 }
 
-export type SegmentType = 'moving' | 'stop' | 'connector' | 'unmatched';
+export type SegmentType = 'moving' | 'stop' | 'connector' | 'matched' | 'unmatched';
 export type SegmentSource = 'smoothed' | 'stop_anchor' | 'matched';
 
 export interface Segment {
@@ -74,18 +74,50 @@ export interface Segment {
   source: SegmentSource;
   confidence: number;
   dataVersion?: string | null;
+  /** Moving chunk this segment was built from (in-memory only, not persisted) */
+  chunkIndex?: number;
 }
 
 export interface MatchedSegment {
+  /** 'matched' (accepted map-matched geometry) or 'unmatched' (smoothed path kept) */
   segmentType: SegmentType;
+  /** LineString coordinates [lon, lat] */
   coordinates: [number, number][];
   confidence: number;
+  /** Geodesic length of `coordinates` (m) */
   lengthM: number;
   matchedEdgeId?: string;
+  /** Moving chunk this piece belongs to; pieces of one chunk are ordered and cover it */
+  chunkIndex?: number;
+  startTs?: Date;
+  endTs?: Date;
+  regionId?: string | null;
+  dataVersion?: string | null;
+  rejectReason?: string | null;
+  /** Length contributed by matched geometry (m); null for unmatched pieces */
+  matchedLengthM?: number | null;
+}
+
+export interface MatchingSummary {
+  backend: string;
+  nRuns: number;
+  nMatched: number;
+  nUnmatched: number;
+  /** Share of moving-piece length that is accepted matched geometry, 0..1 */
+  matchedShare: number;
+  regionsUsed: string[];
+  rejectReasons: Record<string, number>;
+  httpMs: number;
+}
+
+/** Optional richer matcher contract: matchers may return pieces plus a summary. */
+export interface MatcherResult {
+  segments: MatchedSegment[];
+  summary?: MatchingSummary;
 }
 
 export interface SegmentMatcher {
-  match(ctx: TripContext): Promise<MatchedSegment[]>;
+  match(ctx: TripContext): Promise<MatchedSegment[] | MatcherResult>;
 }
 
 export interface PremiseGeofenceData {
@@ -145,4 +177,5 @@ export interface TripContext {
   distances?: DistanceSummary;
   diagnostics?: TripDiagnostics;
   matchedSegments?: MatchedSegment[];
+  matchingSummary?: MatchingSummary;
 }

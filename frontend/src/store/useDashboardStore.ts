@@ -11,6 +11,8 @@ interface DashboardState {
   status: TripStatus | undefined;
   page: number;
   viewMode: ViewMode;
+  /** Draw every raw GPS fix as a dot on the raw path (off: line + start/end markers only) */
+  showRawPoints: boolean;
   fallbackNotice: string | null;
 
   selectTrip: (tripId: string | null) => void;
@@ -20,6 +22,7 @@ interface DashboardState {
   setStatus: (status: TripStatus | undefined) => void;
   setPage: (page: number) => void;
   setViewMode: (viewMode: ViewMode) => void;
+  setShowRawPoints: (show: boolean) => void;
   setFallbackNotice: (notice: string | null) => void;
 }
 
@@ -31,6 +34,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   status: undefined,
   page: 1,
   viewMode: 'improved',
+  showRawPoints: false,
   fallbackNotice: null,
 
   selectTrip: (selectedTripId) =>
@@ -41,6 +45,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   setStatus: (status) => set({ status, page: 1 }),
   setPage: (page) => set({ page }),
   setViewMode: (viewMode) => set({ viewMode }),
+  // Hiding the dots also clears any pinned/hovered point, whose marker would no longer be visible
+  setShowRawPoints: (showRawPoints) =>
+    set(showRawPoints ? { showRawPoints } : { showRawPoints, selectedPointId: null, hoveredPointId: null }),
   setFallbackNotice: (fallbackNotice) => set({ fallbackNotice }),
 }));
 

@@ -150,6 +150,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+.toggle-option:disabled { opacity: 0.45; cursor: not-allowed; }
+.toggle-option:disabled:hover { color: #4b5563; }
 
 .map-wrap {
   position: relative;
@@ -158,6 +160,28 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   overflow: hidden;
 }
 .map-container, .map { position: absolute; inset: 0; }
+
+/* Matched view legend (bottom-left, clear of zoom controls and the point card) */
+.map-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 24px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: #374151;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; }
+.legend-swatch { display: inline-block; width: 22px; height: 4px; border-radius: 2px; }
+.legend-swatch.dashed { height: 0; border-top: 3px dashed; background: transparent; }
+.legend-hint { font-size: 0.7rem; color: #9ca3af; }
 
 /* Custom Map Marker */
 .custom-map-marker { background: transparent !important; border: none !important; }
@@ -331,6 +355,19 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 }
 .metric-val.raw { color: #64748b; }
 .metric-val.smoothed { color: var(--emerald); }
+.metric-val.matched { color: #7c3aed; }
+.metric-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+.match-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+.match-bar-fill { height: 100%; background: #7c3aed; }
+.reason-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 3px; }
+.reason-list li { display: flex; justify-content: space-between; gap: 8px; }
 
 .savings-badge {
   background: var(--emerald-bg);

@@ -3,7 +3,8 @@ import { stopDetectionStage } from './stages/2_stopDetection.js';
 import { kalmanRtsStage } from './stages/3_kalmanRts.js';
 import { segmentAssemblyStage } from './stages/4_segmentAssembly.js';
 import { distanceStage } from './stages/5_distance.js';
-import { matchingStage, NoopMatcher } from './stages/6_matching.js';
+import { matchingStage } from './stages/6_matching.js';
+import { createMatcher } from './matching/index.js';
 import { persistStage } from './stages/7_persist.js';
 import { publishStage } from './stages/8_publish.js';
 import { defaultPipelineConfig, type PipelineConfig } from './config.js';
@@ -15,6 +16,11 @@ export interface TripProcessorOptions {
   matcher?: SegmentMatcher;
   skipPersist?: boolean;
   skipPublish?: boolean;
+  /**
+   * Run the matcher even when the odometer-discrepancy trigger did not fire
+   * (manual / debugging runs). Requires mapMatching.enabled; never used by the worker.
+   */
+  forceMatching?: boolean;
 }
 
 export class TripProcessor {
@@ -23,7 +29,8 @@ export class TripProcessor {
 
   constructor(private readonly options: TripProcessorOptions = {}) {
     this.config = options.config ?? defaultPipelineConfig;
-    this.matcher = options.matcher ?? new NoopMatcher();
+    // Built once per processor so region cache / health state persist across trips in the worker
+    this.matcher = options.matcher ?? createMatcher(this.config);
   }
 
   /**
@@ -71,7 +78,7 @@ export class TripProcessor {
     ctx = distanceStage(ctx);
 
     // 6. Matching: run SegmentMatcher if enabled and triggered
-    ctx = await matchingStage(ctx, this.matcher);
+    ctx = await matchingStage(ctx, this.matcher, { force: this.options.forceMatching });
 
     // 7. Persist: atomic database transaction (delete + bulk insert)
     if (!this.options.skipPersist) {

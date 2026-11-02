@@ -1,6 +1,7 @@
 import { useDashboardStore } from '../store/useDashboardStore';
 import { useTripProcessed } from '../hooks/useTripProcessed';
 import { formatDateTime } from '../lib/format';
+import { rejectReasonLabel } from '../lib/matching';
 import type { ProcessedStop } from '../types';
 
 function formatDuration(seconds: number): string {
@@ -32,6 +33,12 @@ export function TripStatsCard() {
   const savedPct = rawM > 0 ? ((savedM / rawM) * 100).toFixed(1) : '0';
 
   const totalDwellS = stops.reduce((acc, s) => acc + s.dwell_s, 0);
+
+  const matching = data?.matching ?? null;
+  const matchedM = summary?.distance_final_m ?? smoothedM;
+  const topReasons = Object.entries(matching?.reject_reasons ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
 
   return (
     <div className="trip-stats-sidebar">
@@ -69,7 +76,7 @@ export function TripStatsCard() {
           <div className="stats-box metric-hero">
             <span className="metric-label">Distance Comparison</span>
             
-            <div className="metric-grid">
+            <div className={`metric-grid${matching ? ' three' : ''}`}>
               <div className="metric-col">
                 <span className="sub-label">Original (Raw)</span>
                 <span className="metric-val raw">{formatKm(rawM)}</span>
@@ -78,6 +85,12 @@ export function TripStatsCard() {
                 <span className="sub-label">Improved (Smoothed)</span>
                 <span className="metric-val smoothed">{formatKm(smoothedM)}</span>
               </div>
+              {matching && (
+                <div className="metric-col" title="Final distance: road-matched stretches use matched length, the rest keeps the smoothed length">
+                  <span className="sub-label">Matched (Road)</span>
+                  <span className="metric-val matched">{formatKm(matchedM)}</span>
+                </div>
+              )}
             </div>
 
             {savedM > 0 && (
@@ -100,6 +113,43 @@ export function TripStatsCard() {
               </div>
             )}
           </div>
+
+          {/* Map Matching Card (only when the matcher ran) */}
+          {matching && (
+            <div className="stats-box">
+              <div className="box-title-row">
+                <span className="metric-label">Map Matching</span>
+                <span className="badge done">{Math.round(matching.matched_share * 100)}% on roads</span>
+              </div>
+              <div className="match-bar" aria-hidden="true">
+                <div className="match-bar-fill" style={{ width: `${Math.min(100, matching.matched_share * 100)}%` }} />
+              </div>
+              <div className="diag-grid small">
+                <div className="diag-row">
+                  <span className="muted">Matched segments:</span>
+                  <strong>{matching.n_matched}</strong>
+                </div>
+                <div className="diag-row">
+                  <span className="muted">Kept smoothed:</span>
+                  <strong>{matching.n_unmatched}</strong>
+                </div>
+                <div className="diag-row">
+                  <span className="muted">Regions used:</span>
+                  <strong>{matching.regions_used.length ? matching.regions_used.join(', ') : '–'}</strong>
+                </div>
+              </div>
+              {topReasons.length > 0 && (
+                <ul className="reason-list small muted">
+                  {topReasons.map(([reason, count]) => (
+                    <li key={reason}>
+                      <span>{rejectReasonLabel(reason)}</span>
+                      <span>×{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Stops & Dwell Card */}
           <div className="stats-box">
