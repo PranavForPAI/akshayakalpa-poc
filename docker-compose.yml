@@ -1,3 +1,26 @@
+# Shared settings for the backend API and the trip-processing worker
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: akshayakalpa-backend:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment: &app-env
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    POSTGRES_DB: ${POSTGRES_DB}
+    # Overrides localhost to the internal docker network host 'postgres:5432'
+    DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    # Overrides localhost to the internal docker network host 'redis:6379'
+    REDIS_URL: redis://redis:6379
+    FRAPPE_BASE_URL: ${FRAPPE_BASE_URL}
+    DEBUG_MODE: ${DEBUG_MODE}
+    REDIS_LRU_CAP: ${REDIS_LRU_CAP:-50}
+    # Marks this as a deployed environment: dev-only Prisma commands refuse to run here
+    DEPLOY_ENV: production
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -20,6 +43,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # One-shot, verified pg_dump into ./backups. Runs on every `docker compose up` before the
+  # backend starts (and therefore before any migration). If the backup fails, the backend does
+  # not start. Manual/cron backup: docker compose run --rm db-backup
+  db-backup:
+    image: postgres:16-alpine
+    container_name: akshayakalpa-db-backup
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_DIR: /backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_LABEL: ${BACKUP_LABEL:-pre-start}
+    volumes:
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
+      - ./scripts/db-backup.sh:/db-backup.sh:ro
+    entrypoint: ["sh", "/db-backup.sh"]
+
   redis:
     image: redis:7-alpine
     container_name: akshayakalpa-redis
@@ -37,39 +83,59 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    <<: *app
     container_name: akshayakalpa-backend
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      db-backup:
+        # The entrypoint runs the migration guard + `prisma migrate deploy` only after a good backup
+        condition: service_completed_successfully
     ports:
       # Bound to 127.0.0.1:3000 for Caddy reverse proxy on the host
       - "127.0.0.1:3000:3000"
-    env_file:
-      - .env
     environment:
+      <<: *app-env
       PORT: 3000
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      # Overrides localhost to the internal docker network host 'postgres:5432'
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-      # Overrides localhost to the internal docker network host 'redis:6379'
-      REDIS_URL: redis://redis:6379
-      FRAPPE_BASE_URL: ${FRAPPE_BASE_URL}
-      DEBUG_MODE: ${DEBUG_MODE}
-      REDIS_LRU_CAP: ${REDIS_LRU_CAP:-50}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  # Trip-processing worker (pipeline stages 1-8: smoothing, stops, distance, map matching).
+  # Skips the migration entrypoint and starts only after the backend (which migrates) is healthy.
+  worker:
+    <<: *app
+    container_name: akshayakalpa-worker
+    depends_on:
+      backend:
+        condition: service_healthy
+    entrypoint: ["node"]
+    command: ["dist/tripProcessing/worker/worker.js"]
+    environment:
+      <<: *app-env
+      MAP_MATCHING_ENABLED: ${MAP_MATCHING_ENABLED:-false}
+      MAP_MATCHING_BACKEND: ${MAP_MATCHING_BACKEND:-noop}
+
+  # OSRM map-matching server for the Surat region. Opt-in: enable with COMPOSE_PROFILES=matching
+  # in .env (or `docker compose --profile matching up -d`). Needs a built dataset in
+  # ${OSRM_DATA_DIR}/${OSRM_SURAT_DATASET}.osrm* (see README "Production: trip matching stack").
+  # Reachable from backend/worker at http://osrm-surat:5000 (register the region with that URL).
+  osrm-surat:
+    image: ${OSRM_IMAGE:-ghcr.io/project-osrm/osrm-backend}
+    container_name: akshayakalpa-osrm-surat
+    restart: unless-stopped
+    profiles: ["matching"]
+    command: ["osrm-routed", "--algorithm", "mld", "--max-matching-size", "100", "/data/${OSRM_SURAT_DATASET:-surat}.osrm"]
+    volumes:
+      - ${OSRM_DATA_DIR:-./osrm-data}:/data:ro
+    ports:
+      # Localhost only, for health checks/debugging from the host
+      - "127.0.0.1:5002:5000"
 
 volumes:
   postgres_data:

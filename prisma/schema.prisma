@@ -174,7 +174,11 @@ model TripProcessedPoint {
   source          String   // smoothed | stop_anchor | raw_fallback
   sigmaM          Float    @map("sigma_m")
   speedMps        Float    @map("speed_mps")
-  flags           String[] @default([]) // rejected | in_stop | gap_edge
+  flags           String[] @default([]) // rejected | in_stop | gap_edge | accuracy_averaged
+  /// Forward-only Kalman estimate (before the RTS backward pass); null for rows from older runs
+  kfLat           Float?   @map("kf_lat")
+  kfLon           Float?   @map("kf_lon")
+  kfSigmaM        Float?   @map("kf_sigma_m")
   pipelineVersion String   @map("pipeline_version")
   createdAt       DateTime @default(now()) @map("created_at")
 

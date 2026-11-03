@@ -43,6 +43,10 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/dist ./dist
 
+# Migration guard / backup scripts, OSRM region polygons and profiles (used by the CLIs)
+COPY scripts ./scripts
+COPY osrm ./osrm
+
 # Copy entrypoint startup script
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
@@ -50,6 +54,7 @@ RUN chmod +x docker-entrypoint.sh
 # Expose backend port
 EXPOSE 3000
 
-# Entrypoint script waits for Postgres & runs Prisma sync before starting the app
+# Entrypoint waits for Postgres, checks pending migrations (migration-guard) and runs
+# `prisma migrate deploy` before starting the app. It never resets or pushes the schema.
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

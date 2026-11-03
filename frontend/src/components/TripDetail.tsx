@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { useTripPoints } from '../hooks/useTripPoints';
 import { useTripProcessed } from '../hooks/useTripProcessed';
-import { TripMap, MATCHED_COLOR, UNMATCHED_COLOR } from './TripMap';
+import { TripMap, MATCHED_COLOR, UNMATCHED_COLOR, RTS_COLOR, KALMAN_COLOR, RAW_COMPARE_COLOR, hasKalmanPath } from './TripMap';
 import { hasMatchResult } from '../lib/matching';
 import { PointCard } from './PointCard';
 import { ExportButton } from './ExportButton';
@@ -23,8 +23,10 @@ export function TripDetail() {
   );
 
   const canShowMatched = hasMatchResult(processedQuery.data);
-  // A trip without match results falls back to the smoothed view instead of an empty map
-  const effectiveViewMode = viewMode === 'matched' && !canShowMatched ? 'improved' : viewMode;
+  const canShowKalman = hasKalmanPath(processedQuery.data);
+  // A trip without match results / Kalman data falls back to the RTS view instead of an empty map
+  const effectiveViewMode =
+    (viewMode === 'matched' && !canShowMatched) || (viewMode === 'kalman' && !canShowKalman) ? 'improved' : viewMode;
   const rawPathVisible = effectiveViewMode === 'original' || effectiveViewMode === 'compare';
   const matchedTitle = canShowMatched
     ? 'View road-snapped (OSRM map-matched) path; unmatched stretches keep the smoothed path'
@@ -73,11 +75,25 @@ export function TripDetail() {
               </button>
               <button
                 type="button"
+                className={`toggle-option ${effectiveViewMode === 'kalman' ? 'active' : ''}`}
+                onClick={() => setViewMode('kalman')}
+                disabled={!canShowKalman}
+                aria-disabled={!canShowKalman}
+                title={
+                  canShowKalman
+                    ? 'Forward-only Kalman filter: each point uses only the fixes up to that moment (what a live tracker would show)'
+                    : `No Kalman data stored for this trip yet. Reprocess it: npm run match-trip -- ${tripId ?? '<tripId>'} (or reprocess-trip + worker)`
+                }
+              >
+                〰️ Kalman
+              </button>
+              <button
+                type="button"
                 className={`toggle-option ${effectiveViewMode === 'improved' ? 'active' : ''}`}
                 onClick={() => setViewMode('improved')}
-                title="View Kalman-smoothed trajectory with clustered stops"
+                title="Kalman + RTS backward smoother: each point also uses the fixes after it (best for finished trips)"
               >
-                ✨ Improved (Smoothed)
+                ✨ Improved (RTS)
               </button>
               <button
                 type="button"
@@ -93,9 +109,9 @@ export function TripDetail() {
                 type="button"
                 className={`toggle-option ${viewMode === 'compare' ? 'active' : ''}`}
                 onClick={() => setViewMode('compare')}
-                title="Overlay original and improved tracks simultaneously"
+                title="Overlay raw, Kalman-only and RTS-smoothed tracks"
               >
-                🔀 Compare Both
+                🔀 Compare
               </button>
             </div>
 
@@ -142,6 +158,36 @@ export function TripDetail() {
               Not matched (smoothed path kept)
             </div>
             <div className="legend-hint">Hover a segment for details</div>
+          </div>
+        )}
+        {(effectiveViewMode === 'compare' || effectiveViewMode === 'kalman' || effectiveViewMode === 'improved') && (
+          <div className="map-legend" aria-label="Smoothing legend">
+            {effectiveViewMode === 'compare' && (
+              <div className="legend-row">
+                <span className="legend-swatch dashed" style={{ borderColor: RAW_COMPARE_COLOR }} />
+                Raw GPS
+              </div>
+            )}
+            {(effectiveViewMode === 'kalman' || (effectiveViewMode === 'compare' && canShowKalman)) && (
+              <div className="legend-row">
+                <span className="legend-swatch" style={{ background: KALMAN_COLOR }} />
+                Kalman (forward only)
+              </div>
+            )}
+            {effectiveViewMode !== 'kalman' && (
+              <div className="legend-row">
+                <span className="legend-swatch" style={{ background: RTS_COLOR }} />
+                RTS smoothed (Kalman + backward pass)
+              </div>
+            )}
+            <div className="legend-row">
+              <span className="legend-swatch dotted" style={{ borderColor: '#64748b' }} />
+              GPS gap (no fixes, straight line)
+            </div>
+            <div className="legend-row">
+              <span className="legend-dot" />
+              Averaged low-accuracy fixes
+            </div>
           </div>
         )}
         {plottable.length > 0 && <PointCard points={plottable} />}

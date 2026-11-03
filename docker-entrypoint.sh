@@ -38,6 +38,12 @@ if [ "$NEEDS_BASELINE" = "yes" ]; then
   npx prisma migrate resolve --applied 0_init
 fi
 
+# Refuse pending migrations that can delete or rewrite data (DROP/TRUNCATE/type changes),
+# unless the migration carries a reviewed "-- allow-destructive: <reason>" marker.
+# The db-backup service has already taken a verified backup before this container started.
+echo "[entrypoint] Checking pending migrations for destructive statements..."
+node scripts/migration-guard.mjs
+
 # Applies only pending, committed migrations from prisma/migrations. Never resets or drops data.
 # Fails the container start if a migration fails, instead of running against a wrong schema.
 echo "[entrypoint] Applying pending database migrations..."

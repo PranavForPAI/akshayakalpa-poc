@@ -12,7 +12,7 @@
     "nStopPoints": 186,
     "nChunks": 2,
     "triggerReason": null,
-    "paramsHash": "a415ad8d9b75a278510f22b02eacbb33",
+    "paramsHash": "fd02ed0c3f15c56a62cef9468eec4993",
     "simplifiedPolyline": "qodnAgerxM@cdAyaAA",
     "pipelineVersion": "v1.0.0"
   },
@@ -23,7 +23,7 @@
     "nStopPoints": 186,
     "nChunks": 2,
     "triggerReason": null,
-    "paramsHash": "a415ad8d9b75a278510f22b02eacbb33"
+    "paramsHash": "fd02ed0c3f15c56a62cef9468eec4993"
   },
   "stops": [
     {
@@ -1242,7 +1242,10 @@
       "flags": [
         "gap_edge"
       ],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971582045587764,
+      "kfLongitude": 77.59460090661013,
+      "kfSigmaM": 8.48528137423857
     },
     {
       "rawPointId": 2,
@@ -1257,7 +1260,10 @@
       "speedMps": 9.997522380942158,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595157686753,
+      "kfLongitude": 77.59468810870949,
+      "kfSigmaM": 6.040213307389503
     },
     {
       "rawPointId": 3,
@@ -1272,7 +1278,10 @@
       "speedMps": 10.005616168780216,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.9715947347752,
+      "kfLongitude": 77.59477779435727,
+      "kfSigmaM": 4.958704613142993
     },
     {
       "rawPointId": 4,
@@ -1287,7 +1296,10 @@
       "speedMps": 10.008519016939722,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971599889685873,
+      "kfLongitude": 77.59487174701282,
+      "kfSigmaM": 4.331689296393213
     },
     {
       "rawPointId": 5,
@@ -1302,7 +1314,10 @@
       "speedMps": 10.009972058311316,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159944830729,
+      "kfLongitude": 77.59496299173101,
+      "kfSigmaM": 3.922454108078736
     },
     {
       "rawPointId": 6,
@@ -1317,7 +1332,10 @@
       "speedMps": 10.007646692159547,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596210633802,
+      "kfLongitude": 77.59505830309675,
+      "kfSigmaM": 3.6367011345013323
     },
     {
       "rawPointId": 7,
@@ -1332,7 +1350,10 @@
       "speedMps": 10.00341462554588,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159839587028,
+      "kfLongitude": 77.59515058342666,
+      "kfSigmaM": 3.4286918092591767
     },
     {
       "rawPointId": 8,
@@ -1347,7 +1368,10 @@
       "speedMps": 10.005607229505104,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596513045814,
+      "kfLongitude": 77.5952416961821,
+      "kfSigmaM": 3.273109788950927
     },
     {
       "rawPointId": 9,
@@ -1362,7 +1386,10 @@
       "speedMps": 10.009196106099653,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159464840892,
+      "kfLongitude": 77.59533340375731,
+      "kfSigmaM": 3.154574086984873
     },
     {
       "rawPointId": 10,
@@ -1377,7 +1404,10 @@
       "speedMps": 10.006067283918355,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592680265553,
+      "kfLongitude": 77.595427525573,
+      "kfSigmaM": 3.063086765815519
     },
     {
       "rawPointId": 11,
@@ -1392,7 +1422,10 @@
       "speedMps": 9.997218065702612,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592927725752,
+      "kfLongitude": 77.59552150800941,
+      "kfSigmaM": 2.9918157534907026
     },
     {
       "rawPointId": 12,
@@ -1407,7 +1440,10 @@
       "speedMps": 9.99688475616742,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593996379198,
+      "kfLongitude": 77.59561182626528,
+      "kfSigmaM": 2.9359141167886786
     },
     {
       "rawPointId": 13,
@@ -1422,7 +1458,10 @@
       "speedMps": 10.005017977452576,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594067223224,
+      "kfLongitude": 77.59570260081613,
+      "kfSigmaM": 2.891844619036601
     },
     {
       "rawPointId": 14,
@@ -1437,7 +1476,10 @@
       "speedMps": 10.009219030624438,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595414813844,
+      "kfLongitude": 77.59579496249457,
+      "kfSigmaM": 2.8569698544992055
     },
     {
       "rawPointId": 15,
@@ -1452,7 +1494,10 @@
       "speedMps": 10.009865089148871,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595023743575,
+      "kfLongitude": 77.5958872580344,
+      "kfSigmaM": 2.8292909524235577
     },
     {
       "rawPointId": 16,
@@ -1467,7 +1512,10 @@
       "speedMps": 10.014754875634795,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159371014819,
+      "kfLongitude": 77.59597777267732,
+      "kfSigmaM": 2.8072739357091674
     },
     {
       "rawPointId": 17,
@@ -1482,7 +1530,10 @@
       "speedMps": 10.01310226012475,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591713202011,
+      "kfLongitude": 77.59607237616335,
+      "kfSigmaM": 2.7897302419801155
     },
     {
       "rawPointId": 18,
@@ -1497,7 +1548,10 @@
       "speedMps": 10.002384643886701,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159336232877,
+      "kfLongitude": 77.59616592602735,
+      "kfSigmaM": 2.7757320954872533
     },
     {
       "rawPointId": 19,
@@ -1512,7 +1566,10 @@
       "speedMps": 9.993920750537429,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593547148439,
+      "kfLongitude": 77.5962592452534,
+      "kfSigmaM": 2.7645511134634466
     },
     {
       "rawPointId": 20,
@@ -1527,7 +1584,10 @@
       "speedMps": 9.991103499832459,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593890279157,
+      "kfLongitude": 77.59635078067919,
+      "kfSigmaM": 2.755612887799588
     },
     {
       "rawPointId": 21,
@@ -1542,7 +1602,10 @@
       "speedMps": 9.994126163523983,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593257232504,
+      "kfLongitude": 77.5964420653308,
+      "kfSigmaM": 2.748462846552401
     },
     {
       "rawPointId": 22,
@@ -1557,7 +1620,10 @@
       "speedMps": 9.99442302479347,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592586785153,
+      "kfLongitude": 77.59653488234942,
+      "kfSigmaM": 2.742740262070264
     },
     {
       "rawPointId": 23,
@@ -1572,7 +1638,10 @@
       "speedMps": 9.997310624737764,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592028918987,
+      "kfLongitude": 77.59662539256269,
+      "kfSigmaM": 2.738158255972147
     },
     {
       "rawPointId": 24,
@@ -1587,7 +1656,10 @@
       "speedMps": 10.005641957554547,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592144675121,
+      "kfLongitude": 77.59671645341874,
+      "kfSigmaM": 2.7344882891769053
     },
     {
       "rawPointId": 25,
@@ -1602,7 +1674,10 @@
       "speedMps": 10.011394285112482,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591976624453,
+      "kfLongitude": 77.59680829349834,
+      "kfSigmaM": 2.73154805065835
     },
     {
       "rawPointId": 26,
@@ -1617,7 +1692,10 @@
       "speedMps": 10.01773124263161,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159085125283,
+      "kfLongitude": 77.59689917118038,
+      "kfSigmaM": 2.729191949662513
     },
     {
       "rawPointId": 27,
@@ -1632,7 +1710,10 @@
       "speedMps": 10.020821507394686,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159277583996,
+      "kfLongitude": 77.59699200700527,
+      "kfSigmaM": 2.727303619866413
     },
     {
       "rawPointId": 28,
@@ -1647,7 +1728,10 @@
       "speedMps": 10.013007841405669,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591211036737,
+      "kfLongitude": 77.59708650171915,
+      "kfSigmaM": 2.7257899895470596
     },
     {
       "rawPointId": 29,
@@ -1662,7 +1746,10 @@
       "speedMps": 10.00299617307003,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591040987871,
+      "kfLongitude": 77.59717967117818,
+      "kfSigmaM": 2.7245765777775577
     },
     {
       "rawPointId": 30,
@@ -1677,7 +1764,10 @@
       "speedMps": 9.998483554453319,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97158998892556,
+      "kfLongitude": 77.59727212265743,
+      "kfSigmaM": 2.723603755004998
     },
     {
       "rawPointId": 31,
@@ -1692,7 +1782,10 @@
       "speedMps": 10.000405545801694,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159202664779,
+      "kfLongitude": 77.59736319238219,
+      "kfSigmaM": 2.722823765089455
     },
     {
       "rawPointId": 32,
@@ -1707,7 +1800,10 @@
       "speedMps": 10.003936319285202,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592743318295,
+      "kfLongitude": 77.59745515252867,
+      "kfSigmaM": 2.7221983504250824
     },
     {
       "rawPointId": 33,
@@ -1722,7 +1818,10 @@
       "speedMps": 10.000824556014573,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592464153646,
+      "kfLongitude": 77.59754846503321,
+      "kfSigmaM": 2.7216968558854227
     },
     {
       "rawPointId": 34,
@@ -1737,7 +1836,10 @@
       "speedMps": 9.993061320203662,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591234713518,
+      "kfLongitude": 77.59764192192378,
+      "kfSigmaM": 2.7212947136919023
     },
     {
       "rawPointId": 35,
@@ -1752,7 +1854,10 @@
       "speedMps": 9.992904459744603,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159243830666,
+      "kfLongitude": 77.59773254630113,
+      "kfSigmaM": 2.720972231805235
     },
     {
       "rawPointId": 36,
@@ -1767,7 +1872,10 @@
       "speedMps": 10.000761049788796,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590681332799,
+      "kfLongitude": 77.59782343167684,
+      "kfSigmaM": 2.7207136244767036
     },
     {
       "rawPointId": 37,
@@ -1782,7 +1890,10 @@
       "speedMps": 10.005705184127473,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591312286668,
+      "kfLongitude": 77.59791538508084,
+      "kfSigmaM": 2.7205062362010453
     },
     {
       "rawPointId": 38,
@@ -1797,7 +1908,10 @@
       "speedMps": 10.006435315323005,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590474426934,
+      "kfLongitude": 77.59800785562965,
+      "kfSigmaM": 2.720339920257769
     },
     {
       "rawPointId": 39,
@@ -1812,7 +1926,10 @@
       "speedMps": 10.01013115012561,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590708639134,
+      "kfLongitude": 77.59809877680682,
+      "kfSigmaM": 2.720206540899071
     },
     {
       "rawPointId": 40,
@@ -1827,7 +1944,10 @@
       "speedMps": 10.015781063826816,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592639378184,
+      "kfLongitude": 77.5981907360805,
+      "kfSigmaM": 2.7200995744884056
     },
     {
       "rawPointId": 41,
@@ -1842,7 +1962,10 @@
       "speedMps": 10.019286383124866,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593600597135,
+      "kfLongitude": 77.59828241545361,
+      "kfSigmaM": 2.720013789860152
     },
     {
       "rawPointId": 42,
@@ -1857,7 +1980,10 @@
       "speedMps": 10.016104988673387,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594075498825,
+      "kfLongitude": 77.59837660568645,
+      "kfSigmaM": 2.719944992126422
     },
     {
       "rawPointId": 43,
@@ -1872,7 +1998,10 @@
       "speedMps": 10.010890474545956,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593755458649,
+      "kfLongitude": 77.59846882641138,
+      "kfSigmaM": 2.7198898173118096
     },
     {
       "rawPointId": 44,
@@ -1887,7 +2016,10 @@
       "speedMps": 10.010805629190417,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595136912054,
+      "kfLongitude": 77.59856111959118,
+      "kfSigmaM": 2.7198455677157973
     },
     {
       "rawPointId": 45,
@@ -1902,7 +2034,10 @@
       "speedMps": 10.012243895036844,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596604479398,
+      "kfLongitude": 77.59865284270676,
+      "kfSigmaM": 2.719810079915339
     },
     {
       "rawPointId": 46,
@@ -1917,7 +2052,10 @@
       "speedMps": 10.009120514891599,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597248308242,
+      "kfLongitude": 77.59874667183176,
+      "kfSigmaM": 2.719781618929868
     },
     {
       "rawPointId": 47,
@@ -1932,7 +2070,10 @@
       "speedMps": 10.00326332406732,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597624740717,
+      "kfLongitude": 77.59883919285649,
+      "kfSigmaM": 2.7197587933589134
     },
     {
       "rawPointId": 48,
@@ -1947,7 +2088,10 @@
       "speedMps": 10.001214180124109,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159826857435,
+      "kfLongitude": 77.5989315641329,
+      "kfSigmaM": 2.719740487333559
     },
     {
       "rawPointId": 49,
@@ -1962,7 +2106,10 @@
       "speedMps": 10.001960457789592,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596932200434,
+      "kfLongitude": 77.59902320155513,
+      "kfSigmaM": 2.719725805948624
     },
     {
       "rawPointId": 50,
@@ -1977,7 +2124,10 @@
       "speedMps": 10.003547077206308,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595721095538,
+      "kfLongitude": 77.59911527557105,
+      "kfSigmaM": 2.719714031503823
     },
     {
       "rawPointId": 51,
@@ -1992,7 +2142,10 @@
       "speedMps": 10.001692245613826,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595576997547,
+      "kfLongitude": 77.59920814613724,
+      "kfSigmaM": 2.7197045884120974
     },
     {
       "rawPointId": 52,
@@ -2007,7 +2160,10 @@
       "speedMps": 9.999657824749631,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593602146847,
+      "kfLongitude": 77.5993003406957,
+      "kfSigmaM": 2.7196970150579594
     },
     {
       "rawPointId": 53,
@@ -2022,7 +2178,10 @@
       "speedMps": 10.004960574713834,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593258415746,
+      "kfLongitude": 77.59939070655714,
+      "kfSigmaM": 2.7196909412290737
     },
     {
       "rawPointId": 54,
@@ -2037,7 +2196,10 @@
       "speedMps": 10.011185130007387,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159387386556,
+      "kfLongitude": 77.59948266854808,
+      "kfSigmaM": 2.7196860700171457
     },
     {
       "rawPointId": 55,
@@ -2052,7 +2214,10 @@
       "speedMps": 10.006935412354975,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593502415006,
+      "kfLongitude": 77.59957674843031,
+      "kfSigmaM": 2.719682163302916
     },
     {
       "rawPointId": 56,
@@ -2067,7 +2232,10 @@
       "speedMps": 10.001804443120312,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591969192824,
+      "kfLongitude": 77.59966873976623,
+      "kfSigmaM": 2.7196790301154317
     },
     {
       "rawPointId": 57,
@@ -2082,7 +2250,10 @@
       "speedMps": 10.002604555278273,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591194636348,
+      "kfLongitude": 77.59976065931609,
+      "kfSigmaM": 2.7196765172963757
     },
     {
       "rawPointId": 58,
@@ -2097,7 +2268,10 @@
       "speedMps": 10.004104227579232,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590328273578,
+      "kfLongitude": 77.59985243138186,
+      "kfSigmaM": 2.719674502012978
     },
     {
       "rawPointId": 59,
@@ -2112,7 +2286,10 @@
       "speedMps": 9.999584246061426,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591272598378,
+      "kfLongitude": 77.59994640229034,
+      "kfSigmaM": 2.7196728857534485
     },
     {
       "rawPointId": 60,
@@ -2127,7 +2304,10 @@
       "speedMps": 9.99358449034095,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589588348824,
+      "kfLongitude": 77.6000384856501,
+      "kfSigmaM": 2.719671589511359
     },
     {
       "rawPointId": 61,
@@ -2142,7 +2322,10 @@
       "speedMps": 9.992019012090404,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591010462541,
+      "kfLongitude": 77.60013076346206,
+      "kfSigmaM": 2.719670549923548
     },
     {
       "rawPointId": 62,
@@ -2157,7 +2340,10 @@
       "speedMps": 9.991359474635754,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589758112431,
+      "kfLongitude": 77.600222530949,
+      "kfSigmaM": 2.7196697161727346
     },
     {
       "rawPointId": 63,
@@ -2172,7 +2358,10 @@
       "speedMps": 9.987780954444107,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971588611668217,
+      "kfLongitude": 77.60031589540128,
+      "kfSigmaM": 2.7196690475034297
     },
     {
       "rawPointId": 64,
@@ -2187,7 +2376,10 @@
       "speedMps": 9.987960314398835,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971588552255715,
+      "kfLongitude": 77.60040637096594,
+      "kfSigmaM": 2.719668511229698
     },
     {
       "rawPointId": 65,
@@ -2202,7 +2394,10 @@
       "speedMps": 9.993437128052232,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589273731917,
+      "kfLongitude": 77.60049797097136,
+      "kfSigmaM": 2.7196680811373874
     },
     {
       "rawPointId": 66,
@@ -2217,7 +2412,10 @@
       "speedMps": 9.995435350093079,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971588662835202,
+      "kfLongitude": 77.60058983190589,
+      "kfSigmaM": 2.719667736202721
     },
     {
       "rawPointId": 67,
@@ -2232,7 +2430,10 @@
       "speedMps": 9.99394125571916,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971588320747665,
+      "kfLongitude": 77.60068260197771,
+      "kfSigmaM": 2.7196674595646027
     },
     {
       "rawPointId": 68,
@@ -2247,7 +2448,10 @@
       "speedMps": 9.99360900750452,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.9715876105825,
+      "kfLongitude": 77.60077406650412,
+      "kfSigmaM": 2.7196672377004147
     },
     {
       "rawPointId": 69,
@@ -2262,7 +2466,10 @@
       "speedMps": 9.997880583907529,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589865912334,
+      "kfLongitude": 77.6008652545639,
+      "kfSigmaM": 2.7196670597649986
     },
     {
       "rawPointId": 70,
@@ -2277,7 +2484,10 @@
       "speedMps": 9.999987404999255,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590721116863,
+      "kfLongitude": 77.60095774366633,
+      "kfSigmaM": 2.719666917060522
     },
     {
       "rawPointId": 71,
@@ -2292,7 +2502,10 @@
       "speedMps": 10.00294305433037,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591925568976,
+      "kfLongitude": 77.60104875258273,
+      "kfSigmaM": 2.7196668026113118
     },
     {
       "rawPointId": 72,
@@ -2307,7 +2520,10 @@
       "speedMps": 10.009211345029893,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591435681646,
+      "kfLongitude": 77.60114022406873,
+      "kfSigmaM": 2.7196667108228687
     },
     {
       "rawPointId": 73,
@@ -2322,7 +2538,10 @@
       "speedMps": 10.01479416803488,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590754471439,
+      "kfLongitude": 77.6012315683397,
+      "kfSigmaM": 2.7196666372083946
     },
     {
       "rawPointId": 74,
@@ -2337,7 +2556,10 @@
       "speedMps": 10.01434780300273,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592566387283,
+      "kfLongitude": 77.60132510945385,
+      "kfSigmaM": 2.7196665781694724
     },
     {
       "rawPointId": 75,
@@ -2352,7 +2574,10 @@
       "speedMps": 10.009850005659738,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592870331554,
+      "kfLongitude": 77.6014177522753,
+      "kfSigmaM": 2.7196665308201644
     },
     {
       "rawPointId": 76,
@@ -2367,7 +2592,10 @@
       "speedMps": 10.0092768306864,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592755960135,
+      "kfLongitude": 77.60150976370875,
+      "kfSigmaM": 2.7196664928459455
     },
     {
       "rawPointId": 77,
@@ -2382,7 +2610,10 @@
       "speedMps": 10.010507020420901,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159192282634,
+      "kfLongitude": 77.6016018737008,
+      "kfSigmaM": 2.719666462390563
     },
     {
       "rawPointId": 78,
@@ -2397,7 +2628,10 @@
       "speedMps": 10.011257405408402,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591590213713,
+      "kfLongitude": 77.60169414149422,
+      "kfSigmaM": 2.7196664379652984
     },
     {
       "rawPointId": 79,
@@ -2412,7 +2646,10 @@
       "speedMps": 10.012189434198415,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590978140844,
+      "kfLongitude": 77.6017861124617,
+      "kfSigmaM": 2.719666418376198
     },
     {
       "rawPointId": 80,
@@ -2427,7 +2664,10 @@
       "speedMps": 10.010147078120196,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97158963830064,
+      "kfLongitude": 77.60187952725462,
+      "kfSigmaM": 2.7196664026657085
     },
     {
       "rawPointId": 81,
@@ -2442,7 +2682,10 @@
       "speedMps": 10.01195701847464,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589536062433,
+      "kfLongitude": 77.60197011145387,
+      "kfSigmaM": 2.7196663900658713
     },
     {
       "rawPointId": 82,
@@ -2457,7 +2700,10 @@
       "speedMps": 10.015487390672366,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971589245571243,
+      "kfLongitude": 77.60206281708372,
+      "kfSigmaM": 2.7196663799607816
     },
     {
       "rawPointId": 83,
@@ -2472,7 +2718,10 @@
       "speedMps": 10.009036016414926,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971588395031118,
+      "kfLongitude": 77.60215675926587,
+      "kfSigmaM": 2.7196663718564844
     },
     {
       "rawPointId": 84,
@@ -2487,7 +2736,10 @@
       "speedMps": 9.997544024067809,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159028612496,
+      "kfLongitude": 77.6022508978021,
+      "kfSigmaM": 2.7196663653568254
     },
     {
       "rawPointId": 85,
@@ -2502,7 +2754,10 @@
       "speedMps": 9.993588201087531,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159158216207,
+      "kfLongitude": 77.60234206775098,
+      "kfSigmaM": 2.7196663601440885
     },
     {
       "rawPointId": 86,
@@ -2517,7 +2772,10 @@
       "speedMps": 9.998395552042206,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591689491524,
+      "kfLongitude": 77.60243316595104,
+      "kfSigmaM": 2.719666355963465
     },
     {
       "rawPointId": 87,
@@ -2532,7 +2790,10 @@
       "speedMps": 9.99715729715611,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593103254733,
+      "kfLongitude": 77.6025267016566,
+      "kfSigmaM": 2.7196663526105986
     },
     {
       "rawPointId": 88,
@@ -2547,7 +2808,10 @@
       "speedMps": 9.99377671108072,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594806666095,
+      "kfLongitude": 77.60261835791634,
+      "kfSigmaM": 2.7196663499215945
     },
     {
       "rawPointId": 89,
@@ -2562,7 +2826,10 @@
       "speedMps": 9.991862621243882,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595025145636,
+      "kfLongitude": 77.6027112968173,
+      "kfSigmaM": 2.7196663477650094
     },
     {
       "rawPointId": 90,
@@ -2577,7 +2844,10 @@
       "speedMps": 9.992154699856938,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596176079549,
+      "kfLongitude": 77.60280208389227,
+      "kfSigmaM": 2.7196663460354245
     },
     {
       "rawPointId": 91,
@@ -2592,7 +2862,10 @@
       "speedMps": 9.988905889772873,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596435733069,
+      "kfLongitude": 77.60289629611839,
+      "kfSigmaM": 2.7196663446482945
     },
     {
       "rawPointId": 92,
@@ -2607,7 +2880,10 @@
       "speedMps": 9.98608399545992,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597748864744,
+      "kfLongitude": 77.60298706259928,
+      "kfSigmaM": 2.719666343535814
     },
     {
       "rawPointId": 93,
@@ -2622,7 +2898,10 @@
       "speedMps": 9.994006889016262,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596701505565,
+      "kfLongitude": 77.60307759093527,
+      "kfSigmaM": 2.7196663426436034
     },
     {
       "rawPointId": 94,
@@ -2637,7 +2916,10 @@
       "speedMps": 10.002144940524678,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596372184392,
+      "kfLongitude": 77.60316879145401,
+      "kfSigmaM": 2.7196663419280487
     },
     {
       "rawPointId": 95,
@@ -2652,7 +2934,10 @@
       "speedMps": 10.008871709513853,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595945194686,
+      "kfLongitude": 77.6032600310557,
+      "kfSigmaM": 2.719666341354173
     },
     {
       "rawPointId": 96,
@@ -2667,7 +2952,10 @@
       "speedMps": 10.014465709624616,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596623443777,
+      "kfLongitude": 77.60335172500639,
+      "kfSigmaM": 2.7196663408939235
     },
     {
       "rawPointId": 97,
@@ -2682,7 +2970,10 @@
       "speedMps": 10.017774654725295,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159511887611,
+      "kfLongitude": 77.60344380668374,
+      "kfSigmaM": 2.7196663405248023
     },
     {
       "rawPointId": 98,
@@ -2697,7 +2988,10 @@
       "speedMps": 10.01887200086484,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595692801884,
+      "kfLongitude": 77.60353619510143,
+      "kfSigmaM": 2.719666340228767
     },
     {
       "rawPointId": 99,
@@ -2712,7 +3006,10 @@
       "speedMps": 10.017024057682578,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597016246506,
+      "kfLongitude": 77.60362917591925,
+      "kfSigmaM": 2.719666339991346
     },
     {
       "rawPointId": 100,
@@ -2727,7 +3024,10 @@
       "speedMps": 10.01261006768077,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596349624171,
+      "kfLongitude": 77.60372231904327,
+      "kfSigmaM": 2.7196663398009338
     },
     {
       "rawPointId": 101,
@@ -2742,7 +3042,10 @@
       "speedMps": 10.009606109011647,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597516987142,
+      "kfLongitude": 77.60381481862481,
+      "kfSigmaM": 2.7196663396482235
     },
     {
       "rawPointId": 102,
@@ -2757,7 +3060,10 @@
       "speedMps": 10.013439144937808,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971596826101631,
+      "kfLongitude": 77.60390573456536,
+      "kfSigmaM": 2.7196663395257494
     },
     {
       "rawPointId": 103,
@@ -2772,7 +3078,10 @@
       "speedMps": 10.021342398659248,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597265150146,
+      "kfLongitude": 77.60399700811806,
+      "kfSigmaM": 2.719666339427525
     },
     {
       "rawPointId": 104,
@@ -2787,7 +3096,10 @@
       "speedMps": 10.02356755703764,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971597002772924,
+      "kfLongitude": 77.60409010174392,
+      "kfSigmaM": 2.719666339348749
     },
     {
       "rawPointId": 105,
@@ -2802,7 +3114,10 @@
       "speedMps": 10.022476701657041,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971595918512739,
+      "kfLongitude": 77.6041823044858,
+      "kfSigmaM": 2.7196663392855704
     },
     {
       "rawPointId": 106,
@@ -2817,7 +3132,10 @@
       "speedMps": 10.018645528599759,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594483042109,
+      "kfLongitude": 77.60427611093752,
+      "kfSigmaM": 2.7196663392349008
     },
     {
       "rawPointId": 107,
@@ -2832,7 +3150,10 @@
       "speedMps": 10.01253646402996,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594147357688,
+      "kfLongitude": 77.60436914139358,
+      "kfSigmaM": 2.719666339194264
     },
     {
       "rawPointId": 108,
@@ -2847,7 +3168,10 @@
       "speedMps": 10.01495443677658,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593961903215,
+      "kfLongitude": 77.6044598318334,
+      "kfSigmaM": 2.7196663391616736
     },
     {
       "rawPointId": 109,
@@ -2862,7 +3186,10 @@
       "speedMps": 10.0172737380872,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971594245915158,
+      "kfLongitude": 77.60455298248262,
+      "kfSigmaM": 2.7196663391355353
     },
     {
       "rawPointId": 110,
@@ -2877,7 +3204,10 @@
       "speedMps": 10.011801534394337,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592742154645,
+      "kfLongitude": 77.604646547112,
+      "kfSigmaM": 2.7196663391145726
     },
     {
       "rawPointId": 111,
@@ -2892,7 +3222,10 @@
       "speedMps": 10.012865921484057,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591595239834,
+      "kfLongitude": 77.60473712766438,
+      "kfSigmaM": 2.7196663390977607
     },
     {
       "rawPointId": 112,
@@ -2907,7 +3240,10 @@
       "speedMps": 10.014887110269566,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591478118473,
+      "kfLongitude": 77.6048304418533,
+      "kfSigmaM": 2.7196663390842777
     },
     {
       "rawPointId": 113,
@@ -2922,7 +3258,10 @@
       "speedMps": 10.011688463962484,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593248267308,
+      "kfLongitude": 77.60492290660305,
+      "kfSigmaM": 2.7196663390734637
     },
     {
       "rawPointId": 114,
@@ -2937,7 +3276,10 @@
       "speedMps": 10.009174983244664,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.97159146259984,
+      "kfLongitude": 77.60501575195856,
+      "kfSigmaM": 2.719666339064791
     },
     {
       "rawPointId": 115,
@@ -2952,7 +3294,10 @@
       "speedMps": 10.007401379018201,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971591064867255,
+      "kfLongitude": 77.6051079752767,
+      "kfSigmaM": 2.7196663390578357
     },
     {
       "rawPointId": 116,
@@ -2967,7 +3312,10 @@
       "speedMps": 10.008429550510993,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971590670682488,
+      "kfLongitude": 77.60519974005584,
+      "kfSigmaM": 2.7196663390522575
     },
     {
       "rawPointId": 117,
@@ -2982,7 +3330,10 @@
       "speedMps": 10.005673231313876,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971592085439411,
+      "kfLongitude": 77.60529330399198,
+      "kfSigmaM": 2.7196663390477838
     },
     {
       "rawPointId": 118,
@@ -2999,7 +3350,10 @@
       "flags": [
         "gap_edge"
       ],
-      "chunkIndex": 0
+      "chunkIndex": 0,
+      "kfLatitude": 12.971593633205108,
+      "kfLongitude": 77.60538564015307,
+      "kfSigmaM": 2.7196663390441955
     },
     {
       "rawPointId": 305,
@@ -3016,7 +3370,10 @@
       "flags": [
         "gap_edge"
       ],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.971962617413963,
+      "kfLongitude": 77.6056707853689,
+      "kfSigmaM": 8.48528137423857
     },
     {
       "rawPointId": 306,
@@ -3031,7 +3388,10 @@
       "speedMps": 9.99290308847225,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972048918558498,
+      "kfLongitude": 77.6056699879808,
+      "kfSigmaM": 6.040213307389503
     },
     {
       "rawPointId": 307,
@@ -3046,7 +3406,10 @@
       "speedMps": 9.992724998540815,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97214251614239,
+      "kfLongitude": 77.60567411043422,
+      "kfSigmaM": 4.958704613142993
     },
     {
       "rawPointId": 308,
@@ -3061,7 +3424,10 @@
       "speedMps": 9.984174151254798,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972235420189127,
+      "kfLongitude": 77.60567542399419,
+      "kfSigmaM": 4.331689296393213
     },
     {
       "rawPointId": 309,
@@ -3076,7 +3442,10 @@
       "speedMps": 9.979643214864476,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972323685831029,
+      "kfLongitude": 77.60567542557887,
+      "kfSigmaM": 3.922454108078736
     },
     {
       "rawPointId": 310,
@@ -3091,7 +3460,10 @@
       "speedMps": 9.982365480536451,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972411777710287,
+      "kfLongitude": 77.60567520966968,
+      "kfSigmaM": 3.6367011345013323
     },
     {
       "rawPointId": 311,
@@ -3106,7 +3478,10 @@
       "speedMps": 9.988448816177241,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972499538556026,
+      "kfLongitude": 77.60567109047189,
+      "kfSigmaM": 3.4286918092591767
     },
     {
       "rawPointId": 312,
@@ -3121,7 +3496,10 @@
       "speedMps": 9.990191472593802,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97259050177256,
+      "kfLongitude": 77.6056701642436,
+      "kfSigmaM": 3.273109788950927
     },
     {
       "rawPointId": 313,
@@ -3136,7 +3514,10 @@
       "speedMps": 9.982384820209992,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972682918482878,
+      "kfLongitude": 77.60566895825721,
+      "kfSigmaM": 3.154574086984873
     },
     {
       "rawPointId": 314,
@@ -3151,7 +3532,10 @@
       "speedMps": 9.974691573656424,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972773185871407,
+      "kfLongitude": 77.60567051693093,
+      "kfSigmaM": 3.063086765815519
     },
     {
       "rawPointId": 315,
@@ -3166,7 +3550,10 @@
       "speedMps": 9.971966703162694,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97286306304611,
+      "kfLongitude": 77.60567185841099,
+      "kfSigmaM": 2.9918157534907026
     },
     {
       "rawPointId": 316,
@@ -3181,7 +3568,10 @@
       "speedMps": 9.968982323801526,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.972953745393982,
+      "kfLongitude": 77.60567166462592,
+      "kfSigmaM": 2.9359141167886786
     },
     {
       "rawPointId": 317,
@@ -3196,7 +3586,10 @@
       "speedMps": 9.97164572324666,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973041566674235,
+      "kfLongitude": 77.60567329290585,
+      "kfSigmaM": 2.891844619036601
     },
     {
       "rawPointId": 318,
@@ -3211,7 +3604,10 @@
       "speedMps": 9.977437237835371,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97313119833108,
+      "kfLongitude": 77.60567331711732,
+      "kfSigmaM": 2.8569698544992055
     },
     {
       "rawPointId": 319,
@@ -3226,7 +3622,10 @@
       "speedMps": 9.9767611826293,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973221900697128,
+      "kfLongitude": 77.60567262317785,
+      "kfSigmaM": 2.8292909524235577
     },
     {
       "rawPointId": 320,
@@ -3241,7 +3640,10 @@
       "speedMps": 9.979709196946736,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973310019262268,
+      "kfLongitude": 77.60567119982034,
+      "kfSigmaM": 2.8072739357091674
     },
     {
       "rawPointId": 321,
@@ -3256,7 +3658,10 @@
       "speedMps": 9.98057629946203,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973401472176857,
+      "kfLongitude": 77.60567245054828,
+      "kfSigmaM": 2.7897302419801155
     },
     {
       "rawPointId": 322,
@@ -3271,7 +3676,10 @@
       "speedMps": 9.975787541826218,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973491856759606,
+      "kfLongitude": 77.60567075751922,
+      "kfSigmaM": 2.7757320954872533
     },
     {
       "rawPointId": 323,
@@ -3286,7 +3694,10 @@
       "speedMps": 9.980557771196635,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973579705170684,
+      "kfLongitude": 77.60566964761014,
+      "kfSigmaM": 2.7645511134634466
     },
     {
       "rawPointId": 324,
@@ -3301,7 +3712,10 @@
       "speedMps": 9.984701364253393,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973670518968978,
+      "kfLongitude": 77.60566793649878,
+      "kfSigmaM": 2.755612887799588
     },
     {
       "rawPointId": 325,
@@ -3316,7 +3730,10 @@
       "speedMps": 9.98150936517163,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973761046671868,
+      "kfLongitude": 77.60566889692652,
+      "kfSigmaM": 2.748462846552401
     },
     {
       "rawPointId": 326,
@@ -3331,7 +3748,10 @@
       "speedMps": 9.98055276227384,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973850782550247,
+      "kfLongitude": 77.60566912418454,
+      "kfSigmaM": 2.742740262070264
     },
     {
       "rawPointId": 327,
@@ -3346,7 +3766,10 @@
       "speedMps": 9.979385970133755,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.973941377122872,
+      "kfLongitude": 77.60566895594059,
+      "kfSigmaM": 2.738158255972147
     },
     {
       "rawPointId": 328,
@@ -3361,7 +3784,10 @@
       "speedMps": 9.976860872877761,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974031512957067,
+      "kfLongitude": 77.60566735799885,
+      "kfSigmaM": 2.7344882891769053
     },
     {
       "rawPointId": 329,
@@ -3376,7 +3802,10 @@
       "speedMps": 9.973598744868092,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974122236664487,
+      "kfLongitude": 77.60566929862715,
+      "kfSigmaM": 2.73154805065835
     },
     {
       "rawPointId": 330,
@@ -3391,7 +3820,10 @@
       "speedMps": 9.970774214192247,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974212108450189,
+      "kfLongitude": 77.60567126474278,
+      "kfSigmaM": 2.729191949662513
     },
     {
       "rawPointId": 331,
@@ -3406,7 +3838,10 @@
       "speedMps": 9.968535151338832,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974302440340496,
+      "kfLongitude": 77.60567052080549,
+      "kfSigmaM": 2.727303619866413
     },
     {
       "rawPointId": 332,
@@ -3421,7 +3856,10 @@
       "speedMps": 9.961867105088293,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97439365735212,
+      "kfLongitude": 77.60566983961128,
+      "kfSigmaM": 2.7257899895470596
     },
     {
       "rawPointId": 333,
@@ -3436,7 +3874,10 @@
       "speedMps": 9.952734789359118,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974484729051236,
+      "kfLongitude": 77.60566819400039,
+      "kfSigmaM": 2.7245765777775577
     },
     {
       "rawPointId": 334,
@@ -3451,7 +3892,10 @@
       "speedMps": 9.9522256083251,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974572798780633,
+      "kfLongitude": 77.60566846667126,
+      "kfSigmaM": 2.723603755004998
     },
     {
       "rawPointId": 335,
@@ -3466,7 +3910,10 @@
       "speedMps": 9.953738011604274,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974663240136547,
+      "kfLongitude": 77.60567019148078,
+      "kfSigmaM": 2.722823765089455
     },
     {
       "rawPointId": 336,
@@ -3481,7 +3928,10 @@
       "speedMps": 9.949407015802741,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974753287786111,
+      "kfLongitude": 77.60566948181645,
+      "kfSigmaM": 2.7221983504250824
     },
     {
       "rawPointId": 337,
@@ -3496,7 +3946,10 @@
       "speedMps": 9.943053710540795,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974844337443905,
+      "kfLongitude": 77.60566996443056,
+      "kfSigmaM": 2.7216968558854227
     },
     {
       "rawPointId": 338,
@@ -3511,7 +3964,10 @@
       "speedMps": 9.944662711058088,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.974931809403213,
+      "kfLongitude": 77.60566849069419,
+      "kfSigmaM": 2.7212947136919023
     },
     {
       "rawPointId": 339,
@@ -3526,7 +3982,10 @@
       "speedMps": 9.956421345099711,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975019478000249,
+      "kfLongitude": 77.60566681071849,
+      "kfSigmaM": 2.720972231805235
     },
     {
       "rawPointId": 340,
@@ -3541,7 +4000,10 @@
       "speedMps": 9.957482930131807,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975110870145526,
+      "kfLongitude": 77.60566616801948,
+      "kfSigmaM": 2.7207136244767036
     },
     {
       "rawPointId": 341,
@@ -3556,7 +4018,10 @@
       "speedMps": 9.949920434626826,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975201401275354,
+      "kfLongitude": 77.60566796857819,
+      "kfSigmaM": 2.7205062362010453
     },
     {
       "rawPointId": 342,
@@ -3571,7 +4036,10 @@
       "speedMps": 9.952454854057354,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975289176257498,
+      "kfLongitude": 77.60566661492021,
+      "kfSigmaM": 2.720339920257769
     },
     {
       "rawPointId": 343,
@@ -3586,7 +4054,10 @@
       "speedMps": 9.961096282511601,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975377876153496,
+      "kfLongitude": 77.60566852114171,
+      "kfSigmaM": 2.720206540899071
     },
     {
       "rawPointId": 344,
@@ -3601,7 +4072,10 @@
       "speedMps": 9.963661824049149,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975468020964767,
+      "kfLongitude": 77.6056678322318,
+      "kfSigmaM": 2.7200995744884056
     },
     {
       "rawPointId": 345,
@@ -3616,7 +4090,10 @@
       "speedMps": 9.963850754728414,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975557390293744,
+      "kfLongitude": 77.60566924106921,
+      "kfSigmaM": 2.720013789860152
     },
     {
       "rawPointId": 346,
@@ -3631,7 +4108,10 @@
       "speedMps": 9.963087826487383,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975647585287486,
+      "kfLongitude": 77.60567040780519,
+      "kfSigmaM": 2.719944992126422
     },
     {
       "rawPointId": 347,
@@ -3646,7 +4126,10 @@
       "speedMps": 9.955616908929363,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975739165693009,
+      "kfLongitude": 77.6056689661928,
+      "kfSigmaM": 2.7198898173118096
     },
     {
       "rawPointId": 348,
@@ -3661,7 +4144,10 @@
       "speedMps": 9.949695309458253,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975828664965007,
+      "kfLongitude": 77.6056683830644,
+      "kfSigmaM": 2.7198455677157973
     },
     {
       "rawPointId": 349,
@@ -3676,7 +4162,10 @@
       "speedMps": 9.951589692248373,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.975917665569382,
+      "kfLongitude": 77.60566671757502,
+      "kfSigmaM": 2.719810079915339
     },
     {
       "rawPointId": 350,
@@ -3691,7 +4180,10 @@
       "speedMps": 9.958034905938641,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97600582988532,
+      "kfLongitude": 77.60566532619147,
+      "kfSigmaM": 2.719781618929868
     },
     {
       "rawPointId": 351,
@@ -3706,7 +4198,10 @@
       "speedMps": 9.960504720130073,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976096216426837,
+      "kfLongitude": 77.60566410931793,
+      "kfSigmaM": 2.7197587933589134
     },
     {
       "rawPointId": 352,
@@ -3721,7 +4216,10 @@
       "speedMps": 9.954467009431943,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97618710764993,
+      "kfLongitude": 77.6056628379218,
+      "kfSigmaM": 2.719740487333559
     },
     {
       "rawPointId": 353,
@@ -3736,7 +4234,10 @@
       "speedMps": 9.946993667867767,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.9762776702595,
+      "kfLongitude": 77.6056636993878,
+      "kfSigmaM": 2.719725805948624
     },
     {
       "rawPointId": 354,
@@ -3751,7 +4252,10 @@
       "speedMps": 9.94425290545641,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976366743127825,
+      "kfLongitude": 77.60566283581421,
+      "kfSigmaM": 2.719714031503823
     },
     {
       "rawPointId": 355,
@@ -3766,7 +4270,10 @@
       "speedMps": 9.942092601067326,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97645722518093,
+      "kfLongitude": 77.60566292642328,
+      "kfSigmaM": 2.7197045884120974
     },
     {
       "rawPointId": 356,
@@ -3781,7 +4288,10 @@
       "speedMps": 9.94197930009901,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976545629848635,
+      "kfLongitude": 77.60566528085499,
+      "kfSigmaM": 2.7196970150579594
     },
     {
       "rawPointId": 357,
@@ -3796,7 +4306,10 @@
       "speedMps": 9.944527010806423,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976635258334362,
+      "kfLongitude": 77.60566570445631,
+      "kfSigmaM": 2.7196909412290737
     },
     {
       "rawPointId": 358,
@@ -3811,7 +4324,10 @@
       "speedMps": 9.94605398715458,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976724290908065,
+      "kfLongitude": 77.60566617102525,
+      "kfSigmaM": 2.7196860700171457
     },
     {
       "rawPointId": 359,
@@ -3826,7 +4342,10 @@
       "speedMps": 9.95183396036011,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976812618582546,
+      "kfLongitude": 77.60566535827849,
+      "kfSigmaM": 2.719682163302916
     },
     {
       "rawPointId": 360,
@@ -3841,7 +4360,10 @@
       "speedMps": 9.960025381265318,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976901077360669,
+      "kfLongitude": 77.6056664670655,
+      "kfSigmaM": 2.7196790301154317
     },
     {
       "rawPointId": 361,
@@ -3856,7 +4378,10 @@
       "speedMps": 9.965617057981166,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.976990414502975,
+      "kfLongitude": 77.60566657226845,
+      "kfSigmaM": 2.7196765172963757
     },
     {
       "rawPointId": 362,
@@ -3871,7 +4396,10 @@
       "speedMps": 9.965604900654984,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977080817191549,
+      "kfLongitude": 77.60566671308639,
+      "kfSigmaM": 2.719674502012978
     },
     {
       "rawPointId": 363,
@@ -3886,7 +4414,10 @@
       "speedMps": 9.965249108878542,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977170265187578,
+      "kfLongitude": 77.60566620723651,
+      "kfSigmaM": 2.7196728857534485
     },
     {
       "rawPointId": 364,
@@ -3901,7 +4432,10 @@
       "speedMps": 9.969932754576709,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97725904395415,
+      "kfLongitude": 77.60566640316706,
+      "kfSigmaM": 2.719671589511359
     },
     {
       "rawPointId": 365,
@@ -3916,7 +4450,10 @@
       "speedMps": 9.976468686462267,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977348047478728,
+      "kfLongitude": 77.60566806975481,
+      "kfSigmaM": 2.719670549923548
     },
     {
       "rawPointId": 366,
@@ -3931,7 +4468,10 @@
       "speedMps": 9.979314040402986,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977438192046826,
+      "kfLongitude": 77.6056687533512,
+      "kfSigmaM": 2.7196697161727346
     },
     {
       "rawPointId": 367,
@@ -3946,7 +4486,10 @@
       "speedMps": 9.978636945673303,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977528306207581,
+      "kfLongitude": 77.60566990497554,
+      "kfSigmaM": 2.7196690475034297
     },
     {
       "rawPointId": 368,
@@ -3961,7 +4504,10 @@
       "speedMps": 9.976612420877586,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977618794115198,
+      "kfLongitude": 77.60566911110345,
+      "kfSigmaM": 2.719668511229698
     },
     {
       "rawPointId": 369,
@@ -3976,7 +4522,10 @@
       "speedMps": 9.974985840727484,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977708721889368,
+      "kfLongitude": 77.60567066978452,
+      "kfSigmaM": 2.7196680811373874
     },
     {
       "rawPointId": 370,
@@ -3991,7 +4540,10 @@
       "speedMps": 9.97495830823687,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977798485225678,
+      "kfLongitude": 77.60566909459699,
+      "kfSigmaM": 2.719667736202721
     },
     {
       "rawPointId": 371,
@@ -4006,7 +4558,10 @@
       "speedMps": 9.969499264933077,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977890169822425,
+      "kfLongitude": 77.60566974955941,
+      "kfSigmaM": 2.7196674595646027
     },
     {
       "rawPointId": 372,
@@ -4021,7 +4576,10 @@
       "speedMps": 9.961436307786142,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.977980717202993,
+      "kfLongitude": 77.6056697538753,
+      "kfSigmaM": 2.7196672377004147
     },
     {
       "rawPointId": 373,
@@ -4036,7 +4594,10 @@
       "speedMps": 9.962018828577422,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978069437936771,
+      "kfLongitude": 77.60567044000398,
+      "kfSigmaM": 2.7196670597649986
     },
     {
       "rawPointId": 374,
@@ -4051,7 +4612,10 @@
       "speedMps": 9.96959104756643,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978157816566055,
+      "kfLongitude": 77.60567147557204,
+      "kfSigmaM": 2.719666917060522
     },
     {
       "rawPointId": 375,
@@ -4066,7 +4630,10 @@
       "speedMps": 9.973005213871142,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97824827575513,
+      "kfLongitude": 77.60567083328966,
+      "kfSigmaM": 2.7196668026113118
     },
     {
       "rawPointId": 376,
@@ -4081,7 +4648,10 @@
       "speedMps": 9.974151511736418,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97833737848096,
+      "kfLongitude": 77.60567002903342,
+      "kfSigmaM": 2.7196667108228687
     },
     {
       "rawPointId": 377,
@@ -4096,7 +4666,10 @@
       "speedMps": 9.974609503018769,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.9784278781978,
+      "kfLongitude": 77.60566839006377,
+      "kfSigmaM": 2.7196666372083946
     },
     {
       "rawPointId": 378,
@@ -4111,7 +4684,10 @@
       "speedMps": 9.969561518129096,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978518881206922,
+      "kfLongitude": 77.60566665761733,
+      "kfSigmaM": 2.7196665781694724
     },
     {
       "rawPointId": 379,
@@ -4126,7 +4702,10 @@
       "speedMps": 9.967434783386926,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978608190008984,
+      "kfLongitude": 77.60566571386374,
+      "kfSigmaM": 2.7196665308201644
     },
     {
       "rawPointId": 380,
@@ -4141,7 +4720,10 @@
       "speedMps": 9.968063133810542,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97869828887383,
+      "kfLongitude": 77.60566616514397,
+      "kfSigmaM": 2.7196664928459455
     },
     {
       "rawPointId": 381,
@@ -4156,7 +4738,10 @@
       "speedMps": 9.968701858253699,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978787781035962,
+      "kfLongitude": 77.60566667015992,
+      "kfSigmaM": 2.719666462390563
     },
     {
       "rawPointId": 382,
@@ -4171,7 +4756,10 @@
       "speedMps": 9.972709951303926,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.978876734660332,
+      "kfLongitude": 77.60566587293359,
+      "kfSigmaM": 2.7196664379652984
     },
     {
       "rawPointId": 383,
@@ -4186,7 +4774,10 @@
       "speedMps": 9.974517454660642,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97896707656579,
+      "kfLongitude": 77.60566619270705,
+      "kfSigmaM": 2.719666418376198
     },
     {
       "rawPointId": 384,
@@ -4201,7 +4792,10 @@
       "speedMps": 9.973092912837872,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979057175807972,
+      "kfLongitude": 77.60566781115803,
+      "kfSigmaM": 2.7196664026657085
     },
     {
       "rawPointId": 385,
@@ -4216,7 +4810,10 @@
       "speedMps": 9.975137669471323,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979146288476517,
+      "kfLongitude": 77.60566955380067,
+      "kfSigmaM": 2.7196663900658713
     },
     {
       "rawPointId": 386,
@@ -4231,7 +4828,10 @@
       "speedMps": 9.979038508280924,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979235897259326,
+      "kfLongitude": 77.60566802129654,
+      "kfSigmaM": 2.7196663799607816
     },
     {
       "rawPointId": 387,
@@ -4246,7 +4846,10 @@
       "speedMps": 9.98089675702378,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.97932570640234,
+      "kfLongitude": 77.6056682331665,
+      "kfSigmaM": 2.7196663718564844
     },
     {
       "rawPointId": 388,
@@ -4261,7 +4864,10 @@
       "speedMps": 9.977357532042483,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979417093162263,
+      "kfLongitude": 77.60567002826758,
+      "kfSigmaM": 2.7196663653568254
     },
     {
       "rawPointId": 389,
@@ -4276,7 +4882,10 @@
       "speedMps": 9.974545359382319,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979506516917164,
+      "kfLongitude": 77.60567065695659,
+      "kfSigmaM": 2.7196663601440885
     },
     {
       "rawPointId": 390,
@@ -4291,7 +4900,10 @@
       "speedMps": 9.975669698558525,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979596389465433,
+      "kfLongitude": 77.60567177150311,
+      "kfSigmaM": 2.719666355963465
     },
     {
       "rawPointId": 391,
@@ -4306,7 +4918,10 @@
       "speedMps": 9.971572480918438,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979687671930824,
+      "kfLongitude": 77.6056723832205,
+      "kfSigmaM": 2.7196663526105986
     },
     {
       "rawPointId": 392,
@@ -4321,7 +4936,10 @@
       "speedMps": 9.967325742388576,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979777391702783,
+      "kfLongitude": 77.6056712825092,
+      "kfSigmaM": 2.7196663499215945
     },
     {
       "rawPointId": 393,
@@ -4336,7 +4954,10 @@
       "speedMps": 9.965124880315217,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979867974051153,
+      "kfLongitude": 77.60567298721432,
+      "kfSigmaM": 2.7196663477650094
     },
     {
       "rawPointId": 394,
@@ -4351,7 +4972,10 @@
       "speedMps": 9.966863974951385,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.979956478832289,
+      "kfLongitude": 77.60567390160075,
+      "kfSigmaM": 2.7196663460354245
     },
     {
       "rawPointId": 395,
@@ -4366,7 +4990,10 @@
       "speedMps": 9.972078993305315,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980045826470144,
+      "kfLongitude": 77.60567297455084,
+      "kfSigmaM": 2.7196663446482945
     },
     {
       "rawPointId": 396,
@@ -4381,7 +5008,10 @@
       "speedMps": 9.968299415310291,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980137578343745,
+      "kfLongitude": 77.60567276730667,
+      "kfSigmaM": 2.719666343535814
     },
     {
       "rawPointId": 397,
@@ -4396,7 +5026,10 @@
       "speedMps": 9.96525846294175,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980226418773785,
+      "kfLongitude": 77.60567325433456,
+      "kfSigmaM": 2.7196663426436034
     },
     {
       "rawPointId": 398,
@@ -4411,7 +5044,10 @@
       "speedMps": 9.965929989241333,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98031684932119,
+      "kfLongitude": 77.60567426786841,
+      "kfSigmaM": 2.7196663419280487
     },
     {
       "rawPointId": 399,
@@ -4426,7 +5062,10 @@
       "speedMps": 9.965957107257779,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980406215526127,
+      "kfLongitude": 77.60567261798641,
+      "kfSigmaM": 2.719666341354173
     },
     {
       "rawPointId": 400,
@@ -4441,7 +5080,10 @@
       "speedMps": 9.972081529387491,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980494511378662,
+      "kfLongitude": 77.60567165342114,
+      "kfSigmaM": 2.7196663408939235
     },
     {
       "rawPointId": 401,
@@ -4456,7 +5098,10 @@
       "speedMps": 9.974131625407338,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980585513823929,
+      "kfLongitude": 77.60567312056085,
+      "kfSigmaM": 2.7196663405248023
     },
     {
       "rawPointId": 402,
@@ -4471,7 +5116,10 @@
       "speedMps": 9.974419664463426,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980674404294522,
+      "kfLongitude": 77.60567336921292,
+      "kfSigmaM": 2.719666340228767
     },
     {
       "rawPointId": 403,
@@ -4486,7 +5134,10 @@
       "speedMps": 9.977007472538583,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98076458605594,
+      "kfLongitude": 77.60567360068629,
+      "kfSigmaM": 2.719666339991346
     },
     {
       "rawPointId": 404,
@@ -4501,7 +5152,10 @@
       "speedMps": 9.978576954124247,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98085410670422,
+      "kfLongitude": 77.6056717289935,
+      "kfSigmaM": 2.7196663398009338
     },
     {
       "rawPointId": 405,
@@ -4516,7 +5170,10 @@
       "speedMps": 9.984873591957419,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.980942665650327,
+      "kfLongitude": 77.60567144154808,
+      "kfSigmaM": 2.7196663396482235
     },
     {
       "rawPointId": 406,
@@ -4531,7 +5188,10 @@
       "speedMps": 9.988039429924676,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98103342157956,
+      "kfLongitude": 77.60567074687741,
+      "kfSigmaM": 2.7196663395257494
     },
     {
       "rawPointId": 407,
@@ -4546,7 +5206,10 @@
       "speedMps": 9.98718039437877,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981123455918185,
+      "kfLongitude": 77.60567253897511,
+      "kfSigmaM": 2.719666339427525
     },
     {
       "rawPointId": 408,
@@ -4561,7 +5224,10 @@
       "speedMps": 9.991371073995412,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981212485330165,
+      "kfLongitude": 77.60567405948119,
+      "kfSigmaM": 2.719666339348749
     },
     {
       "rawPointId": 409,
@@ -4576,7 +5242,10 @@
       "speedMps": 9.998419909953714,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981301626256037,
+      "kfLongitude": 77.60567251944501,
+      "kfSigmaM": 2.7196663392855704
     },
     {
       "rawPointId": 410,
@@ -4591,7 +5260,10 @@
       "speedMps": 9.99728946000523,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981393472303134,
+      "kfLongitude": 77.60567058812794,
+      "kfSigmaM": 2.7196663392349008
     },
     {
       "rawPointId": 411,
@@ -4606,7 +5278,10 @@
       "speedMps": 9.989556248851722,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981484778723768,
+      "kfLongitude": 77.6056721045062,
+      "kfSigmaM": 2.719666339194264
     },
     {
       "rawPointId": 412,
@@ -4621,7 +5296,10 @@
       "speedMps": 9.990954275798886,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981573231324623,
+      "kfLongitude": 77.60567295542606,
+      "kfSigmaM": 2.7196663391616736
     },
     {
       "rawPointId": 413,
@@ -4636,7 +5314,10 @@
       "speedMps": 9.994237307203456,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98166425719806,
+      "kfLongitude": 77.60567269682296,
+      "kfSigmaM": 2.7196663391355353
     },
     {
       "rawPointId": 414,
@@ -4651,7 +5332,10 @@
       "speedMps": 9.998586277960506,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981752559372579,
+      "kfLongitude": 77.60567181166978,
+      "kfSigmaM": 2.7196663391145726
     },
     {
       "rawPointId": 415,
@@ -4666,7 +5350,10 @@
       "speedMps": 10.004060316159602,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.98184312406487,
+      "kfLongitude": 77.60567029136705,
+      "kfSigmaM": 2.7196663390977607
     },
     {
       "rawPointId": 416,
@@ -4681,7 +5368,10 @@
       "speedMps": 10.000480535897566,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.981934580309183,
+      "kfLongitude": 77.60566954354339,
+      "kfSigmaM": 2.7196663390842777
     },
     {
       "rawPointId": 417,
@@ -4696,7 +5386,10 @@
       "speedMps": 9.995812483007473,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.982025125482858,
+      "kfLongitude": 77.605670173547,
+      "kfSigmaM": 2.7196663390734637
     },
     {
       "rawPointId": 418,
@@ -4711,7 +5404,10 @@
       "speedMps": 9.991231886112287,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.982116378674938,
+      "kfLongitude": 77.60566991636809,
+      "kfSigmaM": 2.719666339064791
     },
     {
       "rawPointId": 419,
@@ -4726,7 +5422,10 @@
       "speedMps": 9.986899259514468,
       "source": "smoothed",
       "flags": [],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.982206961533231,
+      "kfLongitude": 77.60567127585114,
+      "kfSigmaM": 2.7196663390578357
     },
     {
       "rawPointId": 420,
@@ -4743,7 +5442,10 @@
       "flags": [
         "gap_edge"
       ],
-      "chunkIndex": 1
+      "chunkIndex": 1,
+      "kfLatitude": 12.982294952556133,
+      "kfLongitude": 77.60567260734324,
+      "kfSigmaM": 2.7196663390522575
     }
   ],
   "matchedSegments": null

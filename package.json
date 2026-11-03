@@ -5,8 +5,11 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:migrate": "node scripts/assert-dev-db.mjs && prisma migrate dev",
+    "db:migrate:create": "node scripts/assert-dev-db.mjs && prisma migrate dev --create-only",
+    "db:check": "node scripts/migration-guard.mjs --all",
+    "db:guard": "node scripts/migration-guard.mjs",
+    "db:deploy": "node scripts/migration-guard.mjs && prisma migrate deploy",
     "db:status": "prisma migrate status",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",

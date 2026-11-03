@@ -163,8 +163,11 @@ export function kalmanRtsStage(ctx: TripContext): TripContext {
         sigmaM: p.accuracyMeters ?? config.minSigmaM,
         speedMps: p.speedMps ?? 0,
         source: 'smoothed',
-        flags: ['gap_edge'],
+        flags: p.averagedCount ? ['gap_edge', 'accuracy_averaged'] : ['gap_edge'],
         chunkIndex: chunk.chunkIndex,
+        kfLatitude: p.latitude,
+        kfLongitude: p.longitude,
+        kfSigmaM: p.accuracyMeters ?? config.minSigmaM,
       });
       continue;
     }
@@ -437,6 +440,13 @@ export function kalmanRtsStage(ctx: TripContext): TripContext {
       if (k === 0 || k === nPts - 1) {
         flags.push('gap_edge');
       }
+      if (rec.point.averagedCount) {
+        flags.push('accuracy_averaged');
+      }
+
+      // Forward-only Kalman estimate (what the filter knew at this moment, before RTS)
+      const [kfLon, kfLat] = transformer.inverse(rec.xFilt[0], rec.xFilt[1]);
+      const kfSigmaM = Math.sqrt(Math.max(0.1, rec.pFilt[0] + rec.pFilt[5]));
 
       allSmoothedPoints.push({
         rawPointId: rec.point.id,
@@ -452,6 +462,9 @@ export function kalmanRtsStage(ctx: TripContext): TripContext {
         source: 'smoothed',
         flags,
         chunkIndex: chunk.chunkIndex,
+        kfLatitude: kfLat,
+        kfLongitude: kfLon,
+        kfSigmaM,
       });
     }
   }

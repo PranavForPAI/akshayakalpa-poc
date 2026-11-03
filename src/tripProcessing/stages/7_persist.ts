@@ -59,6 +59,9 @@ export async function persistStage(ctx: TripContext): Promise<TripContext> {
         source: p.source,
         sigmaM: p.sigmaM,
         speedMps: p.speedMps,
+        kfLat: p.kfLatitude ?? null,
+        kfLon: p.kfLongitude ?? null,
+        kfSigmaM: p.kfSigmaM ?? null,
         flags: p.flags,
         pipelineVersion,
       }));

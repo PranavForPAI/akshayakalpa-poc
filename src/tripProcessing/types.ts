@@ -10,6 +10,8 @@ export interface RawPoint {
   speedAccuracyMps: number | null;
   headingDegrees: number | null;
   isMock?: boolean;
+  /** Set by preprocess when this point is the average of N low-accuracy fixes */
+  averagedCount?: number;
 }
 
 export interface MetricCoord {
@@ -44,7 +46,7 @@ export interface Stop {
   absorbedRawIds: number[];
 }
 
-export type PointFlag = 'rejected' | 'in_stop' | 'gap_edge';
+export type PointFlag = 'rejected' | 'in_stop' | 'gap_edge' | 'accuracy_averaged';
 
 export interface SmoothedPoint {
   rawPointId?: number;
@@ -60,10 +62,15 @@ export interface SmoothedPoint {
   source: 'smoothed' | 'stop_anchor' | 'raw_fallback';
   flags: PointFlag[];
   chunkIndex?: number;
+  /** Forward Kalman filter estimate (before the RTS backward pass), for comparison */
+  kfLatitude?: number;
+  kfLongitude?: number;
+  kfSigmaM?: number;
 }
 
 export type SegmentType = 'moving' | 'stop' | 'connector' | 'matched' | 'unmatched';
-export type SegmentSource = 'smoothed' | 'stop_anchor' | 'matched';
+/** 'gap' = straight connector across a GPS gap between two moving chunks (no fixes in between) */
+export type SegmentSource = 'smoothed' | 'stop_anchor' | 'matched' | 'gap';
 
 export interface Segment {
   segmentType: SegmentType;

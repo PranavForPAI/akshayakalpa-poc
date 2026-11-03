@@ -125,14 +125,15 @@ docker compose up -d --build
 
 #### What happens automatically on startup:
 1. `postgres:16-alpine` and `redis:7-alpine` spin up with healthchecks.
-2. `docker-entrypoint.sh` runs inside the backend container and tests the PostgreSQL connection.
-3. Once Postgres is ready, it applies pending migrations:
-   ```bash
-   npx prisma migrate deploy
-   ```
-   This applies only the committed, not-yet-applied files in `prisma/migrations/`. Existing data is never reset or dropped. If a migration fails, the container stops instead of starting against the wrong schema.
-   A database created earlier with `prisma db push` (tables but no `_prisma_migrations` history) is detected and baselined once: `0_init` is marked as applied, and only newer migrations then run.
+2. **`db-backup`** (one-shot) dumps the database to `./backups/<db>_<timestamp>_pre-start.dump` and verifies the dump. If the backup fails, the backend does **not** start, so no migration runs without a good backup.
+3. `docker-entrypoint.sh` runs inside the backend container:
+   1. waits for PostgreSQL;
+   2. baselines a database created earlier with `prisma db push` (tables but no `_prisma_migrations` history): `0_init` is marked as applied once;
+   3. runs **`scripts/migration-guard.mjs`**: pending migrations that drop or rewrite data are refused unless reviewed (see [Database migrations & data safety](#-database-migrations--data-safety));
+   4. runs `npx prisma migrate deploy`, which applies only the committed, not-yet-applied files in `prisma/migrations/`. It never resets or drops data by itself. If a migration fails, the container stops instead of starting against the wrong schema.
 4. The Node.js production server starts on port `3000` (bound to `127.0.0.1:3000`).
+5. **`worker`** (trip processing: smoothing, stops, distance, map matching) starts once the backend is healthy, i.e. after migrations.
+6. **`osrm-surat`** (map-matching server) starts only if the `matching` profile is enabled. See [Step 4](#step-4-trip-processing--map-matching-on-the-server).
 
 #### Verify backend status:
 ```bash
@@ -206,6 +207,91 @@ Caddy will automatically provision and renew trusted SSL/TLS certificates via Le
 
 ---
 
+### Step 4: Trip processing & map matching on the server
+
+This adds the trip-processing worker and an OSRM map-matching server to the compose stack. Commands assume a Linux server with Docker, run from the repo root (`$REPO`). How OSRM works and what you can tune: [section 4 of the pipeline docs](#4-map-matching-with-osrm-snapping-rides-to-roads).
+
+**Memory:** the whole stack fits in 4 GiB for city-sized regions. Building an OSRM dataset for a city needs ~250 MB; serving Surat ~100–200 MB. Do not build zone- or India-wide datasets on the server.
+
+#### 4.1 Server `.env` additions
+```env
+# Marks the server as production: dev-only Prisma commands (migrate dev / reset) refuse to run
+DEPLOY_ENV=production
+
+# Trip processing (worker)
+MAP_MATCHING_ENABLED=true
+MAP_MATCHING_BACKEND=osrm_regional
+MM_TRIGGER_PCT=3          # worker matches a trip only when smoothed vs odometer differs by more
+MM_MIN_KM=3               # ...and the trip is longer than this
+
+# OSRM container (compose profile "matching")
+COMPOSE_PROFILES=matching
+OSRM_DATA_DIR=./osrm-data
+OSRM_SURAT_DATASET=surat
+OSRM_IMAGE=ghcr.io/project-osrm/osrm-backend   # pin to the exact image/tag the dataset was built with
+
+# Backups (optional)
+BACKUP_KEEP=14
+BACKUP_HOST_DIR=./backups
+```
+Without `COMPOSE_PROFILES=matching` the OSRM container isn't started. The worker still runs smoothing, and trips stay unmatched (`region_unavailable`/`no_region_coverage`).
+
+#### 4.2 Build the OSRM dataset (one-time, and whenever map data or the profile changes)
+**Either** build on the server:
+```bash
+sudo apt install -y osmium-tool wget
+mkdir -p ~/osrm-build && cd ~/osrm-build
+wget https://download.geofabrik.de/asia/india/western-zone-latest.osm.pbf        # Surat; pick your city's zone
+osmium extract -b 72.60,21.00,73.00,21.30 western-zone-latest.osm.pbf -o surat.osm.pbf --overwrite
+cp "$REPO/osrm/profiles/delivery_bike.lua" .
+IMG=ghcr.io/project-osrm/osrm-backend    # same value as OSRM_IMAGE
+docker run --rm -v "$PWD:/data" -v "$PWD/delivery_bike.lua:/opt/delivery_bike.lua" $IMG osrm-extract -p /opt/delivery_bike.lua /data/surat.osm.pbf
+docker run --rm -v "$PWD:/data" $IMG osrm-partition /data/surat.osrm
+docker run --rm -v "$PWD:/data" $IMG osrm-customize /data/surat.osrm
+mkdir -p "$REPO/osrm-data" && cp surat.osrm* "$REPO/osrm-data/"
+```
+**Or** copy a dataset built elsewhere (e.g. `D:\Work\osrm\surat.osrm*` from the dev machine):
+```bash
+scp D:/Work/osrm/surat.osrm* user@server:$REPO/osrm-data/
+```
+The `.osrm*` files must be served by the **same OSRM version** that built them. Check with `docker run --rm $IMG osrm-routed --version` on both machines.
+
+#### 4.3 Deploy
+```bash
+cd $REPO
+git pull
+docker compose up -d --build        # postgres, redis, db-backup, backend (migrations), worker, osrm-surat
+docker compose ps
+docker compose logs db-backup backend | grep -E "db-backup|migration-guard|migrate|entrypoint"
+curl -s "http://127.0.0.1:5002/nearest/v1/bike/72.8311,21.1702?number=1" | head -c 80   # expect "code":"Ok"
+```
+
+#### 4.4 Register the region (once per region; stored in the database)
+Containers reach OSRM by its compose service name, so the URL is `http://osrm-surat:5000`, not localhost:
+```bash
+docker compose exec backend node dist/cli/osrmRegion.js add --id surat --name "Surat city (delivery bike)" \
+  --geojson osrm/regions/surat.geojson --url http://osrm-surat:5000 --profile bike --kind hotspot \
+  --data-version western-zone-261030+delivery_bike
+docker compose exec backend node dist/cli/osrmRegion.js list
+```
+The worker picks up region changes within 60 s.
+
+#### 4.5 Verify and operate
+```bash
+# Match one trip now (dry run prints results and writes nothing; drop --dry-run to save)
+docker compose exec backend node dist/cli/matchTrip.js TRIP-2026-00105 --dry-run --segments
+
+# Queue reprocessing (the worker picks it up; matching only on odometer discrepancy)
+docker compose exec backend node dist/cli/reprocess.js reprocess-trip TRIP-2026-00105
+
+docker compose logs -f worker
+docker stats --no-stream
+```
+- **New region:** add an `osrm-<city>` service to `docker-compose.yml` (copy `osrm-surat`, change the name, dataset, and host port), build its dataset (4.2), then register it (4.4).
+- **Map data refresh:** build into a new dataset name, point `OSRM_SURAT_DATASET` at it, run `docker compose up -d osrm-surat`, and re-register with the new `--data-version`.
+
+---
+
 ## 🛠️ Local Development (Without Docker)
 
 If you prefer to run services locally during development:
@@ -225,13 +311,7 @@ npm run db:deploy
 ```
 
 #### Changing the schema
-Do **not** use `prisma db push` against shared or production databases. Use migrations:
-1. Edit `prisma/schema.prisma`.
-2. `npm run db:migrate -- --name <short_description>` creates `prisma/migrations/<timestamp>_<name>/migration.sql` and applies it locally.
-3. Review the generated SQL. To rename a column or table, edit the SQL to use `RENAME` instead of the default drop + add, so data is kept. Commit the migration folder together with the schema change.
-4. Deployments run `prisma migrate deploy` automatically (see `docker-entrypoint.sh`).
-
-`npm run db:status` shows which migrations are applied. `prisma migrate dev` may offer to **reset** a local database when it detects drift. Never accept that on a database whose data you need.
+Follow [Database migrations & data safety](#-database-migrations--data-safety). Never use `prisma db push`.
 
 ### 3. Start Backend in Dev Mode
 ```bash
@@ -246,6 +326,101 @@ npm run dev
 # Starts on http://localhost:5173 with Vite HMR
 # In dev, Vite automatically proxies /api requests to http://localhost:3000
 ```
+
+---
+
+## 🗄️ Database migrations & data safety
+
+Production data (trips, coordinates, processed results) must survive every schema change. Each layer below catches what the previous one misses:
+
+| Layer | Where | What it does |
+|---|---|---|
+| Migrations only | `prisma/migrations/` | Schema changes are committed SQL files. Servers only run `prisma migrate deploy`, which applies pending files and never resets data |
+| Backup before every start | `db-backup` service, `scripts/db-backup.sh` | Verified `pg_dump` into `./backups` before the backend (and so any migration) starts. No good backup → no start |
+| Destructive-SQL guard | `scripts/migration-guard.mjs` (entrypoint, `db:deploy`, `db:check`) | Refuses pending migrations containing `DROP TABLE/COLUMN`, `TRUNCATE`, `DELETE FROM`, column type changes, enum drops, unless the file has a reviewed `-- allow-destructive:` line |
+| Dev-only commands blocked on servers | `scripts/assert-dev-db.mjs` (`db:migrate`) | `migrate dev` refuses when `DEPLOY_ENV=production`, or when `SHADOW_DATABASE_URL` points at the real database |
+
+### Rules
+- **Never** run `prisma db push`, `prisma migrate dev`, `prisma migrate reset`, or anything with `--shadow-database-url` against the server database. Prisma **wipes** whatever database it uses as the shadow DB. Locally, `migrate dev` creates and deletes its own temporary shadow DB; leave `SHADOW_DATABASE_URL` unset.
+- Every schema change ships as a migration folder committed **together with** `schema.prisma`.
+- Never edit or delete a migration that has already been deployed; add a new one instead.
+
+### Making a schema change (on your dev machine)
+```bash
+# 1. Edit prisma/schema.prisma
+# 2. Generate the SQL without applying it, so you can review it
+npm run db:migrate:create -- --name add_vehicle_type
+# 3. Read prisma/migrations/<timestamp>_add_vehicle_type/migration.sql (see "safe patterns" below)
+# 4. Check it: fails on unreviewed destructive statements
+npm run db:check
+# 5. Apply to your local DB and test
+npm run db:migrate
+npm test
+# 6. Commit schema.prisma + the new migration folder together
+```
+
+### Safe patterns
+Prisma generates SQL from the *difference* between schemas. It can't tell a rename from "delete A, add B", so some changes need a manual edit:
+
+| You want to… | Prisma generates | Do this instead |
+|---|---|---|
+| Add a column | `ADD COLUMN` | Fine. Make it nullable or give it a `@default` so existing rows are valid |
+| Add a required (`NOT NULL`) column | `ADD COLUMN … NOT NULL` → fails on existing rows | Add with `@default(...)`, or add nullable → backfill → make required in a later migration |
+| Rename a column/table | `DROP COLUMN` + `ADD COLUMN` (**data lost**) | Edit the SQL to `ALTER TABLE "t" RENAME COLUMN "old" TO "new";` (or use `@map("old")` in the schema and change nothing in the DB) |
+| Remove a column/table | `DROP …` (blocked by the guard) | Release 1: stop using it in code. Release 2: drop it in a migration with `-- allow-destructive: <reason>` |
+| Change a column type | `ALTER COLUMN … TYPE` (blocked) | Add a new column, backfill with `UPDATE`, switch code to it, and drop the old one later |
+| Add a unique index | `CREATE UNIQUE INDEX` → fails if duplicates exist | Check for duplicates first and clean them up in a reviewed migration |
+
+The marker goes anywhere in `migration.sql`, for example:
+```sql
+-- allow-destructive: legacy column unused since v1.4; values were copied to "remark" in 20270110_copy_note
+ALTER TABLE "trips" DROP COLUMN "note";
+```
+
+### Deploying
+```bash
+git pull
+docker compose up -d --build
+docker compose logs db-backup backend | grep -E "db-backup|migration-guard|migrate|entrypoint"
+```
+Order on the server: **verified backup → guard → `prisma migrate deploy` → app**.
+- **Guard blocked:** the backend container exits with `[migration-guard] BLOCKED`, and the API is down until fixed. Fix the migration on the dev machine (or add the reviewed marker), commit, and deploy again. To bring the previous version back meanwhile: `git checkout <previous-commit> && docker compose up -d --build`.
+- **Migration failed halfway:** Prisma records it as failed and refuses further deploys. Inspect the logs, fix the data or SQL, then run `docker compose run --rm --entrypoint npx backend prisma migrate resolve --rolled-back <migration_name>` and deploy again. Or restore the pre-start backup (below).
+- `docker compose run --rm --entrypoint npx backend prisma migrate status` shows what is applied.
+
+### Backups
+- Taken automatically on every `docker compose up` into `./backups` (`BACKUP_HOST_DIR`). The newest `BACKUP_KEEP` (14) are kept.
+- Manual backup, e.g. before risky work: `BACKUP_LABEL=manual docker compose run --rm db-backup`
+- Daily backup (crontab on the server):
+  ```cron
+  30 2 * * * cd /path/to/repo && BACKUP_LABEL=daily docker compose run --rm db-backup >> backups/backup.log 2>&1
+  ```
+- **Copy backups off the server** too (`rsync`/`rclone` to another machine or bucket). A backup on the same disk doesn't survive losing the VM.
+
+### Restoring
+Try the restore into a scratch database first, to check the dump:
+```bash
+docker compose exec postgres sh -c 'createdb -U "$POSTGRES_USER" restore_check'
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d restore_check --no-owner' < backups/<file>.dump
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d restore_check -c "select count(*) from trips" -c "select count(*) from coordinates"'
+docker compose exec postgres sh -c 'dropdb -U "$POSTGRES_USER" restore_check'
+```
+Full restore of the live database:
+```bash
+docker compose stop backend worker
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' < backups/<file>.dump
+docker compose start backend worker
+```
+The dump includes `_prisma_migrations`, so after restoring, the migration history matches the restored schema. The next deploy re-applies anything newer.
+
+### First deploy of this setup on an existing server
+The current production DB was created before `db-backup` and the guard existed. For this one deploy, also take a manual dump with the running container **before** `git pull`:
+```bash
+mkdir -p backups
+docker exec akshayakalpa-postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/before-upgrade.dump
+docker exec -i akshayakalpa-postgres pg_restore --list < backups/before-upgrade.dump | grep -c "TABLE DATA"   # > 0
+```
+This deploy then applies `20261031000000_osrm_regional_matching` and `20261103000000_kalman_forward_points`. Both only add tables, nullable columns and indexes; the guard reports them as OK.
 
 ---
 
@@ -721,25 +896,109 @@ To bring the car server back as a named container:
 docker run -d --name osrm-surat-car --restart unless-stopped -p 5000:5000 -v "D:\Work\osrm:/data" ghcr.io/project-osrm/osrm-backend osrm-routed --algorithm mld --max-matching-size 100 /data/surat-trip.osrm
 ```
 
-#### 4.6 Adding a region or updating map data
+#### 4.6 Adding a region (another city) or updating map data
 
-1. **Choose the area.**
-   - Zone: on Geofabrik's India page, check the zone's `.poly` boundary.
-   - Bbox: to fit a specific trip, query its GPS bounds, then pad by ~2 km for the region polygon and ~4 km for the extract:
-     ```sql
-     SELECT min(longitude), min(latitude), max(longitude), max(latitude)
-     FROM coordinates WHERE trip_id = 'TRIP-2026-00083' AND has_gps;
-     ```
-2. **Download, clip and build:** Steps 2–3 with a new file name, e.g. `pune.osm.pbf` → `pune.osrm`.
-3. **Run it** on a new port and container name (Step 4).
-4. **Register it** (Step 5) with a new `--id` and a GeoJSON polygon.
-   - `--kind hotspot` for a city.
-   - `--kind backbone` for a larger, coarser extract used only between hotspots.
-5. **Refreshing an existing region:**
-   - Build into a **new** file name, start it on a new port, and re-register the same `--id` with the new URL and `--data-version`. Re-registering replaces and re-enables the region.
-   - Then `docker rm -f` the old container.
-   - Old matched rows keep their old `data_version`, so you can tell them apart.
-6. **Switching off a region:** `npm run osrm-region -- disable <id>`. To re-enable, run its `add` command again.
+OSRM is used only for **map matching**. Smoothing (Kalman + RTS) works anywhere without map data. A ride outside every registered region is still smoothed; it just stays `unmatched` with reason `no_region_coverage`.
+
+**How a ride reaches the right OSRM server.** Each region row (`osrm_region`) has a polygon, an OSRM URL and a kind. For every moving stretch, the matcher computes the share of its points inside each polygon:
+- if one region covers ≥ 95% of the stretch, the whole stretch goes to that region's server;
+- otherwise the stretch is split by region, so a ride crossing two cities uses both servers;
+- `hotspot` regions win over `backbone`, and points outside every polygon are never sent.
+
+So a new city = **one dataset + one OSRM server + one region row**. No code changes.
+
+##### Worked example: Bengaluru
+
+**1. Find where unmatched rides are, and the Geofabrik zone.**
+```sql
+-- recent trips that had no region
+SELECT trip_id, reject_reasons FROM trip_matching_summaries
+WHERE reject_reasons::text LIKE '%no_region%' ORDER BY created_at DESC;
+
+-- a trip's GPS bounds (pad ~4 km for the extract, ~2 km for the region polygon)
+SELECT min(longitude), min(latitude), max(longitude), max(latitude)
+FROM coordinates WHERE trip_id = 'TRIP-…' AND has_gps;
+```
+India's zones on Geofabrik: `central`, `eastern`, `north-eastern`, `northern`, `southern`, `western`. Each zone page has a `.poly` boundary file. Surat and Pune are in `western`; Bengaluru is in `southern`.
+
+**2. Download and clip** (WSL locally, or on the server):
+```bash
+cd /mnt/d/Work/osrm
+wget https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+osmium extract -b 77.40,12.78,77.85,13.20 southern-zone-latest.osm.pbf -o bengaluru.osm.pbf --overwrite   # minLon,minLat,maxLon,maxLat
+```
+Note the snapshot date from the download's redirect (e.g. `southern-zone-261030`) for `--data-version`.
+
+**3. Build with the delivery profile** (PowerShell, in `D:\Work\osrm`; `delivery_bike.lua` copied from `osrm/profiles/`):
+```powershell
+docker run --rm -v "${PWD}:/data" -v "${PWD}/delivery_bike.lua:/opt/delivery_bike.lua" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/delivery_bike.lua /data/bengaluru.osm.pbf
+docker run --rm -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/bengaluru.osrm
+docker run --rm -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-customize /data/bengaluru.osrm
+```
+
+**4. Run a server for it** on a new container name and port.
+
+Locally:
+```powershell
+docker run -d --name osrm-bengaluru --restart unless-stopped -p 5003:5000 -v "D:\Work\osrm:/data" ghcr.io/project-osrm/osrm-backend osrm-routed --algorithm mld --max-matching-size 100 /data/bengaluru.osrm
+curl.exe "http://localhost:5003/nearest/v1/bike/77.5946,12.9716?number=1"   # expect "code":"Ok"
+```
+On the server: copy the `.osrm*` files into `osrm-data/`, add a service next to `osrm-surat` in `docker-compose.yml`, then run `docker compose up -d osrm-bengaluru`:
+```yaml
+  osrm-bengaluru:
+    image: ${OSRM_IMAGE:-ghcr.io/project-osrm/osrm-backend}
+    container_name: akshayakalpa-osrm-bengaluru
+    restart: unless-stopped
+    profiles: ["matching"]
+    command: ["osrm-routed", "--algorithm", "mld", "--max-matching-size", "100", "/data/bengaluru.osrm"]
+    volumes:
+      - ${OSRM_DATA_DIR:-./osrm-data}:/data:ro
+    ports:
+      - "127.0.0.1:5003:5000"
+```
+
+**5. Create the region polygon** `osrm/regions/bengaluru.geojson`, about 2 km inside the clip on each side, so points near the edge still have roads around them:
+```json
+{
+  "type": "Feature",
+  "properties": { "note": "extract bbox 77.40,12.78,77.85,13.20" },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[77.42,12.80],[77.83,12.80],[77.83,13.18],[77.42,13.18],[77.42,12.80]]]
+  }
+}
+```
+A rectangle is fine. Any Polygon/MultiPolygon works (e.g. drawn at geojson.io) if you want to follow the city's shape.
+
+**6. Register it.**
+
+Locally:
+```powershell
+npm run osrm-region -- add --id bengaluru --name "Bengaluru (delivery bike)" --geojson osrm/regions/bengaluru.geojson --url http://localhost:5003 --profile bike --kind hotspot --data-version southern-zone-<snapshot>+delivery_bike
+```
+On the server (containers reach OSRM by service name, not localhost):
+```bash
+docker compose exec backend node dist/cli/osrmRegion.js add --id bengaluru --name "Bengaluru (delivery bike)" \
+  --geojson osrm/regions/bengaluru.geojson --url http://osrm-bengaluru:5000 --profile bike --kind hotspot \
+  --data-version southern-zone-<snapshot>+delivery_bike
+```
+Workers pick up the new region within 60 s (`regionCacheTtlS`).
+
+**7. Test with a ride from that city:**
+```bash
+npm run match-trip -- TRIP-… --dry-run --segments    # the region column should show "bengaluru"
+npm run match-trip -- TRIP-…                         # save; then open the trip → 🛣️ Matched (Road)
+```
+
+##### Choices worth knowing
+- **RAM:** each city server needs roughly 100–500 MB depending on city size. On a 4 GiB VM, 3–5 cities is comfortable.
+- **One server for several cities:** merge clips (`osmium merge surat.osm.pbf pune.osm.pbf -o west.osm.pbf`) and build one dataset. Register each city as its own region with its own polygon but the **same** URL. Best for cities in the same zone.
+- **Rides between cities (highways):** add a `--kind backbone` region built from a whole zone, with one polygon for the zone. It's used only where no hotspot covers the points. A whole zone needs several GB of RAM to build and 1–2 GB to serve; build it on a bigger machine, not the 4 GiB VM.
+- **Refreshing map data for an existing region:**
+  - Build into a **new** file name, start it on a new port, and re-register the same `--id` with the new URL and `--data-version`. Re-registering replaces and re-enables the region.
+  - Then `docker rm -f` the old container.
+  - Old matched rows keep their old `data_version`, so you can tell them apart.
+- **Switching off a region:** `npm run osrm-region -- disable <id>`. To re-enable, run its `add` command again.
 
 #### 4.7 Reference
 

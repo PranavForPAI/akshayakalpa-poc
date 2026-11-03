@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { TripProcessor } from '../../src/tripProcessing/TripProcessor.js';
 import type { RawPoint } from '../../src/tripProcessing/types.js';
+import { loadPipelineConfig } from '../../src/tripProcessing/config.js';
+import { haversineDistanceM } from '../../src/tripProcessing/geo/geodesic.js';
 
 describe('Stop Detection and Gap Splitting Tests', () => {
   it('stationary jitter: 5 minutes of noisy fixes around one point gives exactly 1 Stop, 0 internal distance, and no points reach Kalman', async () => {
@@ -168,5 +170,130 @@ describe('Stop Detection and Gap Splitting Tests', () => {
     expect(ctx.chunks!.length).toBe(2);
     expect(ctx.chunks![0].points.length).toBe(10);
     expect(ctx.chunks![1].points.length).toBe(10);
+
+    // ...but the path stays continuous: one 'gap' connector joins the two chunks
+    const segs = ctx.segments!;
+    expect(segs.map((x) => `${x.segmentType}:${x.source}`)).toEqual([
+      'moving:smoothed',
+      'connector:gap',
+      'moving:smoothed',
+    ]);
+    const gap = segs[1].coordinates as [number, number][];
+    const movA = segs[0].coordinates as [number, number][];
+    const movB = segs[2].coordinates as [number, number][];
+    expect(gap[0]).toEqual(movA[movA.length - 1]);
+    expect(gap[1]).toEqual(movB[0]);
+
+    // ...and the straight-line gap counts towards distance
+    const gapM = haversineDistanceM(gap[0][1], gap[0][0], gap[1][1], gap[1][0]);
+    expect(gapM).toBeGreaterThan(250);
+    const legacy = await new TripProcessor({
+      config: loadPipelineConfig({ bridgeGaps: false }),
+      skipPersist: true,
+      skipPublish: true,
+    }).processTrip('gap-trip-1', points);
+    expect(legacy.segments!.map((x) => x.segmentType)).toEqual(['moving', 'moving']);
+    expect(ctx.distances!.distanceSmoothedM - legacy.distances!.distanceSmoothedM).toBeCloseTo(gapM, 0);
+  });
+});
+
+describe('Low-accuracy fixes (large accuracy circle)', () => {
+  const baseTime = new Date('2026-03-01T17:00:00Z').getTime();
+  const M_LAT = 110574;
+  /** 20 s good, 30 s of fixes with a big accuracy circle scattered around a centre, 20 s good */
+  function trace(badAccuracyM: number): { points: RawPoint[]; badCentre: [number, number] } {
+    const points: RawPoint[] = [];
+    let id = 1;
+    const lat0 = 12.9716;
+    const lon0 = 77.5946;
+    const push = (t: number, lat: number, acc: number, speed: number | null, heading: number | null) =>
+      points.push({
+        id: id++,
+        latitude: lat,
+        longitude: lon0,
+        deviceTime: new Date(baseTime + t * 1000),
+        accuracyMeters: acc,
+        speedMps: speed,
+        speedAccuracyMps: speed === null ? null : 0.5,
+        headingDegrees: heading,
+      });
+    for (let t = 0; t < 20; t++) push(t, lat0 + (5 * t) / M_LAT, 5, 5, 0);
+    // bad fixes: 5 m/s northwards with +-40 m alternating scatter
+    let sumLat = 0;
+    let n = 0;
+    for (let t = 20; t < 50; t += 2) {
+      const lat = lat0 + (5 * t + (n % 2 === 0 ? 40 : -40)) / M_LAT;
+      push(t, lat, badAccuracyM, 5, 0);
+      sumLat += lat;
+      n++;
+    }
+    for (let t = 50; t < 70; t++) push(t, lat0 + (5 * t) / M_LAT, 5, 5, 0);
+    return { points, badCentre: [sumLat / n, lon0] };
+  }
+
+  it("'average' mode (default) replaces low-accuracy runs with their average centre instead of dropping them", async () => {
+    const { points } = trace(60);
+    const ctx = await new TripProcessor({ skipPersist: true, skipPublish: true }).processTrip('acc-1', points);
+    const averaged = ctx.filteredPoints!.filter((p) => p.averagedCount);
+    // 15 bad fixes over 28 s, lowAccuracyWindowS = 20 s -> 2 averaged points
+    expect(averaged.length).toBe(2);
+    expect(averaged.reduce((a, p) => a + p.averagedCount!, 0)).toBe(15);
+    for (const p of averaged) {
+      // the +-40 m scatter cancels out: the centre lies on the true track (lat0 + 5 m/s * t)
+      const tRel = (p.deviceTime.getTime() - baseTime) / 1000;
+      const trueLat = 12.9716 + (5 * tRel) / M_LAT;
+      expect(Math.abs(p.latitude - trueLat) * M_LAT).toBeLessThan(5);
+      expect(p.headingDegrees).toBeNull();
+    }
+    // no hole: one continuous chunk, and the averaged points are flagged downstream
+    expect(ctx.chunks!.length).toBe(1);
+    expect(ctx.smoothedPoints!.filter((p) => p.flags.includes('accuracy_averaged')).length).toBe(2);
+  });
+
+  it("'drop' mode keeps the old behaviour; fixes worse than lowAccuracyMaxM are always dropped", async () => {
+    const { points } = trace(60);
+    const dropped = await new TripProcessor({
+      config: loadPipelineConfig({ lowAccuracyMode: 'drop' }),
+      skipPersist: true,
+      skipPublish: true,
+    }).processTrip('acc-2', points);
+    expect(dropped.filteredPoints!.length).toBe(40);
+    // the 31 s hole (t=19 -> t=50) exceeds gapSplitS, so dropping breaks the path in two
+    expect(dropped.chunks!.length).toBe(2);
+
+    const terrible = await new TripProcessor({ skipPersist: true, skipPublish: true }).processTrip(
+      'acc-3',
+      trace(500).points
+    );
+    expect(terrible.filteredPoints!.some((p) => p.averagedCount)).toBe(false);
+    expect(terrible.filteredPoints!.length).toBe(40);
+  });
+});
+
+describe('Forward Kalman estimate is kept alongside RTS', () => {
+  it('each smoothed point carries kfLatitude/kfLongitude/kfSigmaM; last point equals RTS', async () => {
+    const points: RawPoint[] = [];
+    const baseTime = new Date('2026-03-01T18:00:00Z').getTime();
+    for (let i = 0; i < 60; i++) {
+      points.push({
+        id: i + 1,
+        latitude: 12.9716 + (6 * i + (i % 2 === 0 ? 4 : -4)) / 110574,
+        longitude: 77.5946,
+        deviceTime: new Date(baseTime + i * 1000),
+        accuracyMeters: 8,
+        speedMps: 6,
+        speedAccuracyMps: 0.5,
+        headingDegrees: 0,
+      });
+    }
+    const ctx = await new TripProcessor({ skipPersist: true, skipPublish: true }).processTrip('kf-1', points);
+    const sp = ctx.smoothedPoints!;
+    expect(sp.every((p) => Number.isFinite(p.kfLatitude) && Number.isFinite(p.kfLongitude) && p.kfSigmaM! > 0)).toBe(true);
+    // RTS starts from the last forward estimate, so they coincide at the end of a chunk...
+    const last = sp[sp.length - 1];
+    expect(last.kfLatitude).toBeCloseTo(last.latitude, 9);
+    // ...while RTS (using future fixes too) is never less certain than the forward filter
+    expect(sp.every((p) => p.sigmaM <= p.kfSigmaM! + 1e-6)).toBe(true);
+    expect(sp.some((p) => Math.abs(p.kfLatitude! - p.latitude) * 110574 > 0.1)).toBe(true);
   });
 });

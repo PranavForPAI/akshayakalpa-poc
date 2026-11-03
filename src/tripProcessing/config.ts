@@ -107,8 +107,21 @@ export const pipelineConfigSchema = z.object({
   mmTriggerPct: z.number().positive().default(3),
   /** Minimum smoothed trip length in km to allow map matching trigger */
   mmMinKm: z.number().positive().default(3),
-  /** Filter out points with accuracy worse than this threshold (meters) */
+  /** Fixes with accuracy worse than this (meters) are "low accuracy" (see lowAccuracyMode) */
   maxAccuracyM: z.number().positive().default(30),
+  /**
+   * What to do with low-accuracy fixes (accuracy > maxAccuracyM):
+   *  - 'average' (default): consecutive low-accuracy fixes are replaced by the average of their
+   *    centres (one point per lowAccuracyWindowS), instead of leaving a hole in the track.
+   *  - 'drop': discard them (previous behaviour).
+   */
+  lowAccuracyMode: z.enum(['average', 'drop']).default('average'),
+  /** Fixes worse than this (meters) are always dropped, even in 'average' mode */
+  lowAccuracyMaxM: z.number().positive().default(150),
+  /** Max time span (s) of low-accuracy fixes averaged into one point */
+  lowAccuracyWindowS: z.number().positive().default(20),
+  /** Join consecutive moving chunks across GPS gaps with a straight 'gap' connector */
+  bridgeGaps: z.boolean().default(true),
   /** Filter out points with speed / implied speed higher than this threshold (km/h) */
   maxSpeedKph: z.number().positive().default(100),
 });
@@ -139,6 +152,12 @@ export function loadPipelineConfig(overrides?: Partial<PipelineConfig>): Pipelin
   }
   if (process.env.MM_TRIGGER_PCT) envConfig.mmTriggerPct = Number(process.env.MM_TRIGGER_PCT);
   if (process.env.MM_MIN_KM) envConfig.mmMinKm = Number(process.env.MM_MIN_KM);
+  if (process.env.MAX_ACCURACY_M) envConfig.maxAccuracyM = Number(process.env.MAX_ACCURACY_M);
+  if (process.env.LOW_ACCURACY_MODE) envConfig.lowAccuracyMode = process.env.LOW_ACCURACY_MODE;
+  if (process.env.LOW_ACCURACY_MAX_M) envConfig.lowAccuracyMaxM = Number(process.env.LOW_ACCURACY_MAX_M);
+  if (process.env.LOW_ACCURACY_WINDOW_S)
+    envConfig.lowAccuracyWindowS = Number(process.env.LOW_ACCURACY_WINDOW_S);
+  if (process.env.BRIDGE_GAPS) envConfig.bridgeGaps = process.env.BRIDGE_GAPS !== 'false';
 
   return pipelineConfigSchema.parse({
     ...envConfig,

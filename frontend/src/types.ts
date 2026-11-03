@@ -69,7 +69,8 @@ export interface TripFilters {
   search?: string;
 }
 
-export type ViewMode = 'original' | 'improved' | 'matched' | 'compare';
+/** improved = RTS smoothed path; kalman = forward-only Kalman filter path (before RTS) */
+export type ViewMode = 'original' | 'kalman' | 'improved' | 'matched' | 'compare';
 
 export interface ProcessedPoint {
   lat: number;
@@ -77,7 +78,12 @@ export interface ProcessedPoint {
   ts: string;
   speed_mps: number;
   sigma_m: number;
+  /** Forward-only Kalman estimate (null for trips processed before it was stored) */
+  kf_lat?: number | null;
+  kf_lon?: number | null;
+  kf_sigma_m?: number | null;
   source: string;
+  /** rejected | in_stop | gap_edge | accuracy_averaged */
   flags: string[];
 }
 

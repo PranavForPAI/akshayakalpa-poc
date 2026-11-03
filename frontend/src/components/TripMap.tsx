@@ -28,6 +28,20 @@ const timeRange = (seg: ProcessedSegment) => {
 export const MATCHED_COLOR = '#7c3aed';
 export const UNMATCHED_COLOR = '#059669';
 const MATCHED_CONNECTOR_COLOR = '#64748b';
+/** Smoothed-path colours: RTS (forward + backward pass) and forward-only Kalman */
+export const RTS_COLOR = '#059669';
+export const KALMAN_COLOR = '#e11d48';
+export const RAW_COMPARE_COLOR = '#f59e0b';
+const CONNECTOR_COLOR = '#6366f1';
+
+const gapTooltip = (seg: ProcessedSegment) => {
+  const s = Math.round((new Date(seg.end_ts).getTime() - new Date(seg.start_ts).getTime()) / 1000);
+  return `<strong>GPS gap: no fixes for ${s}s</strong><br/>Straight line between the last and next fix<br/>${timeRange(seg)}`;
+};
+
+/** Does this processed response carry the forward-only Kalman estimate? */
+export const hasKalmanPath = (data?: TripProcessedResponse | null) =>
+  !!data?.points?.some((p) => p.kf_lat != null && p.kf_lon != null);
 
 interface TripMapProps {
   rawPoints: PlottablePoint[];
@@ -144,6 +158,7 @@ export function TripMap({
 
       const showRaw = viewMode === 'original' || viewMode === 'compare';
       const showImproved = (viewMode === 'improved' || viewMode === 'compare') && !!processedData;
+      const showKalman = (viewMode === 'kalman' || viewMode === 'compare') && hasKalmanPath(processedData);
       const showMatched = viewMode === 'matched' && !!processedData;
 
       // -------------------------------------------------------------
@@ -155,7 +170,7 @@ export function TripMap({
 
         const isCompare = viewMode === 'compare';
         L.polyline(rawLatLngs, {
-          color: isCompare ? '#f59e0b' : '#2563eb',
+          color: isCompare ? RAW_COMPARE_COLOR : '#2563eb',
           weight: isCompare ? 3 : 4,
           opacity: isCompare ? 0.65 : 0.9,
           dashArray: isCompare ? '5, 8' : undefined,
@@ -168,7 +183,7 @@ export function TripMap({
           if (!isEnd && !showRawPoints) return;
           // In compare mode, draw smaller markers for raw to keep map readable
           const size = isEnd ? 16 : isCompare ? 6 : 10;
-          const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : isCompare ? '#f59e0b' : '#2563eb';
+          const color = i === 0 ? '#16a34a' : i === last ? '#dc2626' : isCompare ? RAW_COMPARE_COLOR : '#2563eb';
 
           const icon = L.divIcon({
             className: 'custom-map-marker',
@@ -187,7 +202,7 @@ export function TripMap({
       // -------------------------------------------------------------
       // Layer B: Improved (smoothed) or Matched (road-snapped) Track + Stops + Connectors
       // -------------------------------------------------------------
-      if ((showImproved || showMatched) && processedData) {
+      if ((showImproved || showKalman || showMatched) && processedData) {
         const segments = processedData.segments ?? [];
         const stops = processedData.stops ?? [];
         const smoothedPts = processedData.points ?? [];
@@ -221,34 +236,78 @@ export function TripMap({
                 .addTo(group);
             } else if (seg.segment_type === 'connector') {
               latLngs.forEach((ll) => bounds.extend(ll));
-              L.polyline(latLngs, { color: MATCHED_CONNECTOR_COLOR, weight: 2.5, opacity: 0.8, dashArray: '4, 6' }).addTo(group);
+              const line = L.polyline(latLngs, { color: MATCHED_CONNECTOR_COLOR, weight: 2.5, opacity: 0.8, dashArray: '4, 6' });
+              if (seg.source === 'gap') line.bindTooltip(gapTooltip(seg), { sticky: true });
+              line.addTo(group);
             }
           }
         }
 
-        // 1b. Improved view: smoothed moving segments + connectors
-        for (const seg of showImproved ? segments : []) {
-          if (seg.segment_type === 'moving' && Array.isArray(seg.coordinates[0])) {
-            const coords = seg.coordinates as [number, number][];
-            const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
-            latLngs.forEach((ll) => bounds.extend(ll));
+        // 1b. Smoothed paths: forward-only Kalman and/or RTS (Kalman + backward pass).
+        //     Moving segments store RTS coordinates; the Kalman path is rebuilt from each
+        //     point's kf_lat/kf_lon, and connector ends are moved onto the Kalman endpoints.
+        const kfByRts = new Map<string, [number, number]>();
+        for (const p of smoothedPts) {
+          if (p.kf_lat != null && p.kf_lon != null) kfByRts.set(`${p.lon},${p.lat}`, [p.kf_lon, p.kf_lat]);
+        }
+        const toKalman = (c: [number, number]): [number, number] => kfByRts.get(`${c[0]},${c[1]}`) ?? c;
 
-            L.polyline(latLngs, {
-              color: '#059669', // Emerald
-              weight: 5,
-              opacity: 0.95,
-            }).addTo(group);
-          } else if (seg.segment_type === 'connector' && Array.isArray(seg.coordinates[0])) {
-            const coords = seg.coordinates as [number, number][];
-            const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
-            latLngs.forEach((ll) => bounds.extend(ll));
+        const drawSmoothed = (kind: 'rts' | 'kalman') => {
+          const color = kind === 'rts' ? RTS_COLOR : KALMAN_COLOR;
+          // In compare mode the Kalman line sits under the RTS line, thinner
+          const weight = kind === 'kalman' && viewMode === 'compare' ? 3 : 5;
+          for (const seg of segments) {
+            if (!Array.isArray(seg.coordinates[0])) continue;
+            let coords = seg.coordinates as [number, number][];
+            if (seg.segment_type === 'moving') {
+              if (kind === 'kalman') {
+                const t0 = Date.parse(seg.start_ts);
+                const t1 = Date.parse(seg.end_ts);
+                coords = smoothedPts
+                  .filter((p) => p.kf_lat != null && p.kf_lon != null && Date.parse(p.ts) >= t0 && Date.parse(p.ts) <= t1)
+                  .map((p) => [p.kf_lon!, p.kf_lat!] as [number, number]);
+              }
+              const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
+              latLngs.forEach((ll) => bounds.extend(ll));
+              L.polyline(latLngs, { color, weight, opacity: 0.95 })
+                .bindTooltip(
+                  `<strong>${kind === 'rts' ? 'RTS smoothed' : 'Kalman (forward only)'}</strong><br/>${timeRange(seg)}`,
+                  { sticky: true }
+                )
+                .addTo(group);
+            } else if (seg.segment_type === 'connector') {
+              if (kind === 'kalman') coords = coords.map(toKalman);
+              const latLngs: L.LatLngExpression[] = coords.map((c) => [c[1], c[0]]);
+              latLngs.forEach((ll) => bounds.extend(ll));
+              const isGap = seg.source === 'gap';
+              const line = L.polyline(latLngs, {
+                // GPS gaps continue the path in its own colour; stop connectors stay indigo
+                color: isGap ? color : CONNECTOR_COLOR,
+                weight: isGap ? Math.max(2.5, weight - 2) : 3,
+                opacity: 0.85,
+                dashArray: isGap ? '2, 8' : '6, 6',
+              });
+              if (isGap) line.bindTooltip(gapTooltip(seg), { sticky: true });
+              line.addTo(group);
+            }
+          }
+        };
+        if (showKalman) drawSmoothed('kalman');
+        if (showImproved) drawSmoothed('rts');
 
-            L.polyline(latLngs, {
-              color: '#6366f1', // Indigo connector
-              weight: 3,
-              opacity: 0.85,
-              dashArray: '6, 6',
-            }).addTo(group);
+        // 1c. Points that were the average of several low-accuracy fixes (large accuracy circle)
+        if (showImproved || showKalman) {
+          for (const p of smoothedPts) {
+            if (!p.flags?.includes('accuracy_averaged')) continue;
+            const useKalman = !showImproved && p.kf_lat != null && p.kf_lon != null;
+            const ll: L.LatLngExpression = useKalman ? [p.kf_lat!, p.kf_lon!] : [p.lat, p.lon];
+            L.circleMarker(ll, { radius: 5, color: '#0f172a', weight: 2, fillColor: '#fde047', fillOpacity: 0.9 })
+              .bindTooltip(
+                `<strong>Averaged fix</strong><br/>Centre of consecutive low-accuracy GPS fixes` +
+                  `<br/>${new Date(p.ts).toLocaleTimeString()}`,
+                { direction: 'top' }
+              )
+              .addTo(group);
           }
         }
 

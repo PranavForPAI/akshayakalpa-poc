@@ -181,6 +181,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .legend-row { display: flex; align-items: center; gap: 8px; }
 .legend-swatch { display: inline-block; width: 22px; height: 4px; border-radius: 2px; }
 .legend-swatch.dashed { height: 0; border-top: 3px dashed; background: transparent; }
+.legend-swatch.dotted { height: 0; border-top: 3px dotted; background: transparent; }
+.legend-dot { display: inline-block; width: 10px; height: 10px; margin: 0 6px 0 6px; border-radius: 50%; background: #fde047; border: 2px solid #0f172a; }
 .legend-hint { font-size: 0.7rem; color: #9ca3af; }
 
 /* Custom Map Marker */

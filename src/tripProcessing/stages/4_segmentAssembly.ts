@@ -6,6 +6,10 @@ import type { TripContext, Segment } from '../types.js';
  * - moving: smoothed points from a moving chunk
  * - connector: last moving smoothed point -> stop anchor OR stop anchor -> first moving smoothed point
  * - stop: stationary stay at stop anchor
+ * - connector with source 'gap' (config.bridgeGaps): last point of a moving chunk -> first point
+ *   of the next moving chunk when no stop lies between them. Chunks are split at GPS gaps
+ *   > gapSplitS (app in background, no fix); the vehicle still travelled between them, so the
+ *   path stays continuous and the straight-line gap counts towards distance.
  */
 export function segmentAssemblyStage(ctx: TripContext): TripContext {
   const chunks = ctx.chunks ?? [];
@@ -92,6 +96,23 @@ export function segmentAssemblyStage(ctx: TripContext): TripContext {
           source: 'smoothed',
           confidence: 0.9,
         });
+      } else if (nextItem && nextItem.type === 'chunk' && ctx.config.bridgeGaps) {
+        const nextPts = pointsByChunk.get(nextItem.chunkIdx) ?? [];
+        if (nextPts.length > 0) {
+          const lastPt = chunkPts[chunkPts.length - 1];
+          const firstPt = nextPts[0];
+          segments.push({
+            segmentType: 'connector',
+            startTs: lastPt.deviceTime,
+            endTs: firstPt.deviceTime,
+            coordinates: [
+              [lastPt.longitude, lastPt.latitude],
+              [firstPt.longitude, firstPt.latitude],
+            ],
+            source: 'gap',
+            confidence: 0.5,
+          });
+        }
       }
     } else {
       // item.type === 'stop'

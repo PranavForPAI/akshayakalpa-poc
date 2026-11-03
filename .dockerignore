@@ -7,3 +7,6 @@ logs
 .gitignore
 .env
 frontend
+backups
+osrm-data
+tests
